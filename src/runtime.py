@@ -15,6 +15,7 @@ _TASKS = {}
 _ORDER = []
 _CUR = None
 _NOW = 0.0
+_RUN = 0        # bumped each Run, so the UI can discard records from the last one
 
 MAIN = '__main__'
 
@@ -176,8 +177,9 @@ def _run_until(now, horizon):
     _CUR = None
 
 
-def _run_main(fn):
-    global _CUR
+def _run_main(fn, run_id=0):
+    global _CUR, _RUN
+    _RUN = run_id
     # Drop remembered values so the literals in the freshly-run source win.
     _SLIDERS.clear()
     old = _TASKS.get(MAIN)
@@ -528,8 +530,9 @@ def slider(value=0.5, lo=0.0, hi=1.0, step=None, label=None, _loc=None):
                 step = 1
             else:
                 step = (hif - lof) / 100.0
-        _LOG.append('S|%s|%s|%s|%s|%s|%s|%d' % (
-            key, str(lo), str(hi), str(step), str(cur), label or '', 1 if auto else 0))
+        _LOG.append('S|%s|%s|%s|%s|%s|%s|%d|%d' % (
+            key, str(lo), str(hi), str(step), str(cur), label or '',
+            1 if auto else 0, _RUN))
         return cur
 
     if auto:
@@ -538,7 +541,7 @@ def slider(value=0.5, lo=0.0, hi=1.0, step=None, label=None, _loc=None):
             _SLIDERS[key] = cur
             # timestamped so the thumb moves in step with what is heard, not
             # a lookahead window early
-            _LOG.append('V|%s|%f|%f' % (key, cur, _CUR.t))
+            _LOG.append('V|%s|%f|%f|%d' % (key, cur, _CUR.t, _RUN))
         return cur
 
     return _SLIDERS[key]

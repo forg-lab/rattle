@@ -102,7 +102,7 @@ self.onmessage = (ev) => {
     try {
       mp.runPython('_prime(' + audioNow() + ')');
       mp.runPython(t.code);
-      mp.runPython('_run_main(__main__)');
+      mp.runPython('_run_main(__main__,' + Number(msg.runId || 0) + ')');
       mp.runPython('_flush()');
       const out = mp.globals.get('_OUT');
       if (out) postMessage({ type: 'events', data: out });

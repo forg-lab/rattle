@@ -15,44 +15,20 @@ import { Engine } from './audio.js';
 import './style.css';
 
 const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || '');
-const MOD = isMac ? 'Cmd' : 'Ctrl';
 
-const DEFAULT = `# pysonic - live coding in Python.
-# ${MOD}+Enter to run, ${MOD}+. to stop. Edit while it plays: live_loops
-# swap in at the next loop boundary without dropping the beat.
+// Demos double as the docs; the first one is what loads on a cold start.
+const demoModules = import.meta.glob('../demos/*.py', { query: '?raw', import: 'default', eager: true });
 
-use_bpm(104)
+const DEMOS = Object.keys(demoModules).sort().map((path) => {
+  const file = path.split('/').pop().replace(/\.py$/, '');
+  return {
+    file,
+    label: file.replace(/^\d+[-_]?/, '').replace(/[-_]/g, ' '),
+    code: demoModules[path],
+  };
+});
 
-@live_loop("drums")
-def drums():
-    sample("bd", amp=1.2)
-    sleep(0.5)
-    sample("hat", amp=0.5)
-    sleep(0.5)
-    sample("sn")
-    sleep(0.5)
-    sample("hat", amp=0.4)
-    if one_in(3):
-        sleep(0.25)
-        sample("hat", amp=0.25)
-        sleep(0.25)
-    else:
-        sleep(0.5)
-
-@live_loop("bass", sync="drums")
-def bass():
-    use_synth("saw")
-    notes = scale("e1", "minor_pentatonic")
-    play(notes[choose([0, 0, 2, 3, 5])], release=0.22,
-         cutoff=slider(74, 50, 110, label="cutoff"))
-    sleep(0.25)
-
-@live_loop("pad", sync="drums")
-def pad():
-    use_synth("fm")
-    play(chord("e3", "minor7"), amp=0.35, attack=0.6, release=2.4, room=0.5)
-    sleep(4)
-`;
+const DEFAULT = DEMOS.length ? DEMOS[0].code : '# no demos found\n';
 
 // ---------------------------------------------------------------- highlight
 
@@ -330,7 +306,8 @@ function consume(data) {
     const f = line.split('|');
     if (f[0] === 'L') { say(line.slice(2)); continue; }
     if (f[0] === 'S') {
-      const [, key, lo, hi, step, value, label, auto] = f;
+      const [, key, lo, hi, step, value, label, auto, rid] = f;
+      if (Number(rid) !== runId) continue;   // left over from the previous Run
       const [start, end] = key.split(':').map(Number);
       sliderSpecs.set(key, {
         key, start, end, label, auto: auto === '1',
@@ -340,6 +317,7 @@ function consume(data) {
       continue;
     }
     if (f[0] === 'V') {
+      if (Number(f[4]) !== runId) continue;
       // an automated slider moved; land it when the note is heard, not when
       // the scheduler computed it a lookahead window ago
       vq.push({ at: engine.t0 + parseFloat(f[3]), key: f[1], value: parseFloat(f[2]) });
@@ -427,6 +405,7 @@ requestAnimationFrame(frame);
 
 let started = false;
 let hasRun = false;
+let runId = 0;
 
 function run() {
   if (!ready) { say('still booting MicroPython…', 'warn'); return; }
@@ -445,7 +424,8 @@ function run() {
   vq.length = 0;
   view.dispatch({ effects: setSites.of(Decoration.none) });
   sinceRun = ChangeSet.empty(view.state.doc.length);
-  worker.postMessage({ type: 'run', code: view.state.doc.toString() });
+  runId += 1;
+  worker.postMessage({ type: 'run', code: view.state.doc.toString(), runId });
 }
 
 function stop() {
@@ -460,6 +440,26 @@ function stop() {
 
 document.getElementById('run').onclick = run;
 document.getElementById('stop').onclick = stop;
+
+const demoSel = document.getElementById('demo');
+for (const d of DEMOS) {
+  const o = document.createElement('option');
+  o.value = d.file;
+  o.textContent = d.label;
+  demoSel.append(o);
+}
+demoSel.onchange = () => {
+  const d = DEMOS.find((x) => x.file === demoSel.value);
+  if (!d) return;
+  // Stop first. A live_loop the buffer no longer mentions keeps playing — that
+  // is the right call while performing, but picking a demo means replacing the
+  // piece, not layering it on the last one.
+  stop();
+  view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: d.code } });
+  logEl.innerHTML = '';
+  run();
+  view.focus();
+};
 
 if (import.meta.env.DEV) window.__pysonic = { view, engine, run, stop, worker };
 

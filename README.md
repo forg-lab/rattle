@@ -3,13 +3,35 @@
 A Sonic Pi-style live-coding environment in the browser, driven by Python.
 Fully client-side: MicroPython in a Web Worker, Web Audio for sound, no backend.
 
-**[Try it →](https://barnard-pl-labs.github.io/pysonic/)**
+**[Try it →](https://barnard-pl-labs.github.io/pysonic/)** ·
+**[Language reference →](DOCS.md)** ·
+**[Demos →](demos/)**
 
     npm install
     npm run dev        # http://localhost:5273
 
 Cmd+Enter runs the buffer, Cmd+. stops. Edit while it plays — `live_loop`
 bodies swap in at the next loop boundary without dropping the beat.
+
+## Demos
+
+Nine pieces in [`demos/`](demos/), loadable from the menu in the app. They are
+the tutorial: each one is short enough to read in full and shows one part of the
+language.
+
+| | |
+|---|---|
+| `00-welcome` | what loads on a cold start |
+| `01-hello` | play, sleep, sample |
+| `02-live-loops` | threads, `sync`, hot swapping |
+| `03-scales-and-chords` | note names, rings, progressions |
+| `04-randomness` | deterministic seeds |
+| `05-signals` | functions of time |
+| `06-sliders` | hand controls and automated ones |
+| `07-polyrhythm` | independent clocks drifting in and out |
+| `08-synths-and-effects` | every synth, envelopes, filter, reverb |
+
+The full language reference is [DOCS.md](DOCS.md).
 
 ## How the timing works
 

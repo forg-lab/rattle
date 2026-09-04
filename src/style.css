@@ -61,6 +61,27 @@ button:hover { background: #2e343f; }
 button.primary { background: #23443c; border-color: #2f5d51; color: var(--accent); }
 button.primary:hover { background: #2a5348; }
 
+select#demo {
+  font: inherit;
+  color: var(--fg);
+  background: #262b34;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 5px 8px;
+  cursor: pointer;
+  max-width: 200px;
+}
+select#demo:hover { background: #2e343f; }
+
+a.docs {
+  color: var(--dim);
+  text-decoration: none;
+  font-size: 12px;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 1px;
+}
+a.docs:hover { color: var(--accent); border-color: var(--accent); }
+
 kbd {
   font: 11px var(--mono);
   color: var(--dim);
