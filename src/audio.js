@@ -5,6 +5,19 @@
 const A4 = 440;
 const mtof = (n) => A4 * Math.pow(2, (n - 69) / 12);
 
+// Web Audio throws on a NaN parameter, and an exponential ramp may never touch
+// or cross zero. Musical code hits both constantly and legitimately — amp=0 for
+// a silent step, a value derived from an index that starts at 0 — so every
+// number crossing this boundary is sanitised rather than trusted.
+const EPS = 1e-4;
+
+const num = (v, dflt) => {
+  const n = typeof v === 'number' ? v : parseFloat(v);
+  return Number.isFinite(n) ? n : dflt;
+};
+const gain = (n) => (n > EPS ? n : EPS);
+const hz = (n, ctx) => Math.min(Math.max(n > 1 ? n : 1, 1), ctx.sampleRate / 2 - 100);
+
 export class Engine {
   constructor() {
     this.ctx = new (window.AudioContext || window.webkitAudioContext)({
@@ -72,12 +85,12 @@ export class Engine {
   // routes a voice through pan -> (dry + reverb send)
   #out(node, when, pan = 0, room = 0) {
     const p = this.ctx.createStereoPanner();
-    p.pan.value = Math.max(-1, Math.min(1, pan));
+    p.pan.value = Math.max(-1, Math.min(1, num(pan, 0)));
     node.connect(p);
     p.connect(this.master);
     if (room > 0) {
       const s = this.ctx.createGain();
-      s.gain.value = Math.min(1, room);
+      s.gain.value = Math.min(1, Math.max(0, num(room, 0)));
       p.connect(s).connect(this.verb);
     }
     return p;
@@ -91,35 +104,37 @@ export class Engine {
 
   playSynth(when, p) {
     const ctx = this.ctx;
-    const freq = mtof(Number(p.note));
-    const amp = p.amp === undefined ? 1 : Number(p.amp);
-    const atk = p.attack === undefined ? 0.01 : Number(p.attack);
-    const dec = p.decay === undefined ? 0 : Number(p.decay);
-    const sus = p.sustain === undefined ? 0 : Number(p.sustain);
-    const rel = p.release === undefined ? 0.5 : Number(p.release);
+    const amp = Math.max(0, num(p.amp, 1));
+    if (amp <= 0) return;   // a silent note is silence, not an exception
+    const freq = hz(mtof(num(p.note, 60)), ctx);
+    const atk = Math.max(0, num(p.attack, 0.01));
+    const dec = Math.max(0, num(p.decay, 0));
+    const sus = Math.max(0, num(p.sustain, 0));
+    const rel = Math.max(0, num(p.release, 0.5));
     const kind = p.synth || 'saw';
 
     const env = ctx.createGain();
-    const peak = Math.max(0.0001, amp * 0.28);
-    const susLvl = Math.max(0.0001, peak * 0.7);
-    env.gain.setValueAtTime(0.0001, when);
+    const peak = gain(amp * 0.28);
+    const susLvl = gain(peak * 0.7);
+    env.gain.setValueAtTime(EPS, when);
     env.gain.exponentialRampToValueAtTime(peak, when + Math.max(0.001, atk));
     let t = when + Math.max(0.001, atk);
     if (dec > 0) { env.gain.exponentialRampToValueAtTime(susLvl, t + dec); t += dec; }
     if (sus > 0) { env.gain.setValueAtTime(susLvl, t + sus); t += sus; }
-    env.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(0.01, rel));
+    env.gain.exponentialRampToValueAtTime(EPS, t + Math.max(0.01, rel));
     const stopAt = t + Math.max(0.01, rel) + 0.05;
 
     let src = env;
-    if (p.cutoff !== undefined && p.cutoff !== 'None') {
+    const cut = num(p.cutoff, NaN);
+    if (Number.isFinite(cut)) {
       const f = ctx.createBiquadFilter();
       f.type = 'lowpass';
-      f.frequency.value = mtof(Number(p.cutoff));
-      f.Q.value = (p.res === undefined ? 0.3 : Number(p.res)) * 20;
+      f.frequency.value = hz(mtof(cut), ctx);
+      f.Q.value = Math.max(0, num(p.res, 0.3)) * 20;
       env.connect(f);
       src = f;
     }
-    this.#out(src, when, Number(p.pan || 0), Number(p.room || 0));
+    this.#out(src, when, num(p.pan, 0), num(p.room, 0));
 
     const nodes = [];
     const osc = (type, f, detune = 0) => {
@@ -149,8 +164,8 @@ export class Engine {
       const o = osc('sawtooth', freq);
       const f = ctx.createBiquadFilter();
       f.type = 'lowpass';
-      f.frequency.setValueAtTime(freq * 12, when);
-      f.frequency.exponentialRampToValueAtTime(Math.max(80, freq), when + 0.25);
+      f.frequency.setValueAtTime(hz(freq * 12, ctx), when);
+      f.frequency.exponentialRampToValueAtTime(hz(Math.max(80, freq), ctx), when + 0.25);
       o.connect(f).connect(env);
     } else if (kind === 'pulse') {
       osc('square', freq).connect(env);
@@ -168,10 +183,13 @@ export class Engine {
   playSample(when, p) {
     const ctx = this.ctx;
     const name = p.name || 'bd';
-    const amp = (p.amp === undefined ? 1 : Number(p.amp)) * 0.9;
-    const rate = p.rate === undefined ? 1 : Number(p.rate);
-    const pan = Number(p.pan || 0);
-    const room = Number(p.room || 0);
+    const amp = Math.max(0, num(p.amp, 1)) * 0.9;
+    if (amp <= 0) return;
+    // reverse playback is not supported, so keep rate strictly positive rather
+    // than letting a 0 or negative divide blow up the envelope times below
+    const rate = Math.max(0.01, num(p.rate, 1));
+    const pan = num(p.pan, 0);
+    const room = num(p.room, 0);
 
     const env = ctx.createGain();
     const nodes = [];
@@ -182,7 +200,7 @@ export class Engine {
       s.buffer = this.noise;
       s.playbackRate.value = rate;
       const f = ctx.createBiquadFilter();
-      f.type = type; f.frequency.value = freq; f.Q.value = q;
+      f.type = type; f.frequency.value = hz(freq, ctx); f.Q.value = q;
       s.connect(f).connect(env);
       s.start(when, Math.random());
       s.stop(when + dur);
@@ -191,16 +209,16 @@ export class Engine {
     const tone = (type, f0, f1, dur) => {
       const o = ctx.createOscillator();
       o.type = type;
-      o.frequency.setValueAtTime(f0 * rate, when);
-      o.frequency.exponentialRampToValueAtTime(f1 * rate, when + dur);
+      o.frequency.setValueAtTime(hz(f0 * rate, ctx), when);
+      o.frequency.exponentialRampToValueAtTime(hz(f1 * rate, ctx), when + dur);
       o.connect(env);
       o.start(when); o.stop(when + dur + 0.02);
       nodes.push(o);
     };
     const decayTo = (peak, dur) => {
-      env.gain.setValueAtTime(0.0001, when);
-      env.gain.exponentialRampToValueAtTime(peak * amp, when + 0.002);
-      env.gain.exponentialRampToValueAtTime(0.0001, when + dur);
+      env.gain.setValueAtTime(EPS, when);
+      env.gain.exponentialRampToValueAtTime(gain(peak * amp), when + 0.002);
+      env.gain.exponentialRampToValueAtTime(EPS, when + dur);
       stopAt = when + dur + 0.05;
     };
 
@@ -229,10 +247,11 @@ export class Engine {
     }
 
     let src = env;
-    if (p.cutoff !== undefined && p.cutoff !== 'None') {
+    const cut = num(p.cutoff, NaN);
+    if (Number.isFinite(cut)) {
       const f = ctx.createBiquadFilter();
       f.type = 'lowpass';
-      f.frequency.value = mtof(Number(p.cutoff));
+      f.frequency.value = hz(mtof(cut), ctx);
       env.connect(f);
       src = f;
     }

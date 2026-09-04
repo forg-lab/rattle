@@ -40,11 +40,11 @@ export const CHORDS = [
 export const FUNCS = {
   play: {
     sig: 'play(note, amp=1, pan=0, attack=0.01, decay=0, sustain=0, release=0.5, cutoff=None, res=0.3, room=0)',
-    doc: 'Play a note on the current synth. Accepts a MIDI number (60), a note name ("e3"), or a list for a chord.',
+    doc: 'Play a note on the current synth. Accepts a MIDI number (60), a note name ("e3"), or a list for a chord. amp=0 is silence, not an error.',
   },
   sample: {
     sig: 'sample(name, amp=1, pan=0, rate=1, cutoff=None, room=0)',
-    doc: 'Trigger a drum sample. rate=2 plays an octave up and half as long; rate=-1 is not supported yet.',
+    doc: 'Trigger a drum sample. rate=2 plays an octave up and half as long; rate must be positive (reverse is not supported yet). amp=0 is silence, not an error.',
   },
   sleep: {
     sig: 'sleep(beats)',

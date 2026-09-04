@@ -76,6 +76,20 @@ How often a dragged value is *heard* is set by the loop it lives in: the value
 is only read on the loop's next iteration, so `sleep(0.25)` gives four updates a
 second and `sleep(4)` gives one every few seconds. That is the design, not lag.
 
+## Audio parameters
+
+Every number reaching Web Audio is sanitised in `audio.js` rather than trusted.
+The API throws on a NaN parameter, and an exponential ramp may never touch or
+cross zero — but musical code produces both legitimately, most often from a
+value derived off a loop index that starts at 0:
+
+    sample("hat", amp=0.3 * (i / 8))    # i=0 is silent, not a crash
+
+`amp <= 0` skips the voice entirely, so silence costs nothing. `rate` is held
+strictly positive (reverse playback is unsupported, and 0 would divide the
+envelope times into infinity), frequencies are clamped between 1 Hz and Nyquist,
+and anything non-finite falls back to its default.
+
 ## Errors
 
 Failures mark the offending line in red and report it in the log with a
