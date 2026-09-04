@@ -126,6 +126,32 @@ Pushing to `main` builds and publishes to GitHub Pages via
 pages; the worker resolves its wasm through `import.meta.env.BASE_URL`, so
 nothing is hardcoded to the root.
 
+## State between iterations
+
+`global` works as written. The transform wraps the program in `def __main__()`
+so top-level `sleep` is legal, which would otherwise demote every top-level name
+to a local of that function — so it scans what the top level binds and
+redeclares those names global:
+
+    x = 0
+
+    @live_loop("bass")
+    def bass():
+        global x
+        x += 1
+        play(60, cutoff=50 + (x * 4) % 60)
+        sleep(0.25)
+
+`tick()` does the same job without the global, per thread, and keeps its phase
+across a hot swap:
+
+    play(60, cutoff=50 + (tick() * 4) % 60)
+
+Note that `slider()`'s first argument is only the value it *starts* at — once
+registered it holds its own value, or the drag would be overwritten on every
+iteration. A slider is a hand control; to modulate something from code, compute
+the number.
+
 ## Known limitations
 
 - `sleep` only works inside the script or a `live_loop` body, not inside a

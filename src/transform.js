@@ -149,6 +149,156 @@ function checkBalance(toks, src) {
   }
 }
 
+
+// ---------------------------------------------------------------------------
+// Wrapping the program in `def __main__()` would otherwise demote every
+// top-level name to a local of that function, so `global x` in a live_loop
+// would not see it. Collect what the top level binds and redeclare it global,
+// restoring the semantics the user actually wrote.
+
+const KEYWORDS = new Set([
+  'if', 'elif', 'else', 'while', 'try', 'except', 'finally', 'return', 'yield',
+  'raise', 'assert', 'del', 'pass', 'break', 'continue', 'lambda', 'await',
+  'nonlocal', 'not', 'and', 'or', 'is', 'in', 'None', 'True', 'False',
+]);
+
+// Group tokens into statements that begin at column 0 outside any bracket.
+function topLevelStatements(src, toks) {
+  const stmts = [];
+  let depth = 0;
+  let lineStart = 0;
+  let cur = null;
+
+  for (const t of toks) {
+    if (t.t === 'nl') {
+      lineStart = t.b;
+      if (depth === 0 && cur) { stmts.push(cur); cur = null; }
+      continue;
+    }
+    if (t.t === 'comment') continue;
+
+    const opens = t.t === 'op' && (t.v === '(' || t.v === '[' || t.v === '{');
+    const closes = t.t === 'op' && (t.v === ')' || t.v === ']' || t.v === '}');
+
+    if (cur) {
+      cur.push(t);
+    } else if (depth === 0 && t.a - lineStart === 0) {
+      cur = [t];
+    }
+    if (opens) depth++;
+    else if (closes) depth--;
+    if (depth < 0) depth = 0;
+  }
+  if (cur) stmts.push(cur);
+  return stmts;
+}
+
+// Names bound by a target expression, skipping a.b and a[i] which rebind
+// nothing, and f(x) which is not a target at all.
+function targetNames(span, out) {
+  for (let i = 0; i < span.length; i++) {
+    const t = span[i];
+    if (t.t !== 'name' || KEYWORDS.has(t.v)) continue;
+    const prev = span[i - 1];
+    const next = span[i + 1];
+    if (prev && prev.t === 'op' && prev.v === '.') continue;
+    if (next && next.t === 'op' && (next.v === '.' || next.v === '(' || next.v === '[')) continue;
+    out.add(t.v);
+  }
+}
+
+const AUG = new Set(['+', '-', '*', '/', '%', '&', '|', '^', '@', '>', '<']);
+
+function bindingsOf(stmt, out) {
+  let s = stmt;
+  if (s.length && s[0].t === 'name' && s[0].v === 'async') s = s.slice(1);
+  if (!s.length) return;
+  const head = s[0];
+  const kw = head.t === 'name' ? head.v : null;
+
+  if (kw === 'def' || kw === 'class') {
+    if (s[1] && s[1].t === 'name') out.add(s[1].v);
+    return;
+  }
+  if (kw === 'global') {
+    for (const t of s.slice(1)) if (t.t === 'name') out.add(t.v);
+    return;
+  }
+  if (kw === 'import' || kw === 'from') {
+    // import a.b as c, d   |   from m import a as b, c
+    let rest = s.slice(1);
+    if (kw === 'from') {
+      const at = rest.findIndex((t) => t.t === 'name' && t.v === 'import');
+      if (at < 0) return;
+      rest = rest.slice(at + 1);
+    }
+    let part = [];
+    const flush = () => {
+      if (!part.length) return;
+      const asAt = part.findIndex((t) => t.t === 'name' && t.v === 'as');
+      const pick = asAt >= 0 ? part[asAt + 1] : part[0];
+      if (pick && pick.t === 'name' && pick.v !== '*') out.add(pick.v);
+      part = [];
+    };
+    for (const t of rest) {
+      if (t.t === 'op' && t.v === ',') flush();
+      else part.push(t);
+    }
+    flush();
+    return;
+  }
+  if (kw === 'for') {
+    const at = s.findIndex((t) => t.t === 'name' && t.v === 'in');
+    targetNames(s.slice(1, at < 0 ? s.length : at), out);
+    return;
+  }
+  if (kw === 'with') {
+    for (let i = 0; i < s.length; i++) {
+      if (s[i].t === 'name' && s[i].v === 'as' && s[i + 1] && s[i + 1].t === 'name') out.add(s[i + 1].v);
+    }
+    return;
+  }
+  if (kw && KEYWORDS.has(kw)) return;
+
+  // assignment: split on top-level '=', everything but the last part is a target
+  let depth = 0;
+  const parts = [];
+  let part = [];
+  for (let i = 0; i < s.length; i++) {
+    const t = s[i];
+    if (t.t === 'op') {
+      if (t.v === '(' || t.v === '[' || t.v === '{') depth++;
+      else if (t.v === ')' || t.v === ']' || t.v === '}') depth--;
+      else if (t.v === '=' && depth === 0) {
+        const prev = s[i - 1];
+        const next = s[i + 1];
+        const isCompare = (prev && prev.t === 'op' && (prev.v === '=' || prev.v === '!' || prev.v === '<' || prev.v === '>'))
+          || (next && next.t === 'op' && next.v === '=');
+        if (!isCompare) {
+          // x += 1 binds x too; drop the operator from the target span
+          if (prev && prev.t === 'op' && AUG.has(prev.v)) part.pop();
+          parts.push(part);
+          part = [];
+          continue;
+        }
+      }
+    }
+    part.push(t);
+  }
+  if (!parts.length) return;      // no assignment here
+  for (const target of parts) {
+    const colon = target.findIndex((t) => t.t === 'op' && t.v === ':');
+    targetNames(colon >= 0 ? target.slice(0, colon) : target, out);
+  }
+}
+
+export function topLevelBindings(src, toks) {
+  const out = new Set();
+  for (const stmt of topLevelStatements(src, toks)) bindingsOf(stmt, out);
+  out.delete('__main__');
+  return [...out];
+}
+
 export function transform(src) {
   const toks = tokenize(src);
   checkBalance(toks, src);
@@ -213,5 +363,7 @@ export function transform(src) {
     return ln.trim() === '' ? ln : '    ' + ln;
   });
 
-  return { code: 'def __main__():\n' + body.join('\n') + '\n    return\n' };
+  const globals = topLevelBindings(src, toks);
+  const decl = globals.length ? '    global ' + globals.join(', ') + '\n' : '';
+  return { code: 'def __main__():\n' + decl + body.join('\n') + '\n    return\n' };
 }

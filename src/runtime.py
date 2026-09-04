@@ -37,6 +37,7 @@ def _prime(now):
 def _reset():
     global _CUR, _EV
     _SLIDERS.clear()
+    _TICKS.clear()
     _TASKS.clear()
     del _ORDER[:]
     del _EV[:]
@@ -386,6 +387,22 @@ def choose(seq):
     if isinstance(seq, Ring):
         seq = seq.xs
     return seq[int(_rnd() * len(seq))]
+
+
+# Per-thread counters, the Sonic Pi way to advance something each iteration
+# without reaching for a global. Survives a hot swap so a sweep keeps its phase.
+_TICKS = {}
+
+
+def tick(name='default'):
+    k = _CUR.name + '/' + name
+    v = _TICKS.get(k, -1) + 1
+    _TICKS[k] = v
+    return v
+
+
+def look(name='default'):
+    return _TICKS.get(_CUR.name + '/' + name, -1)
 
 
 def use_synth(name):

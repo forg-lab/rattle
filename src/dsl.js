@@ -69,6 +69,11 @@ export const FUNCS = {
     sig: 'slider(value, lo=0, hi=1, step=None, label=None)',
     doc: 'A draggable control, rendered inline right where you wrote it. Returns its current value, so drop it anywhere a number goes. Dragging retunes the running music; releasing writes the new value back into the code, so it survives a re-run.',
   },
+  tick: {
+    sig: 'tick(name="default")',
+    doc: 'Advance this thread\u2019s counter and return it, starting at 0. The way to move something along each iteration without a global. Index a ring with it and it wraps: notes[tick()].',
+  },
+  look: { sig: 'look(name="default")', doc: 'Read the current tick without advancing it.' },
   log: { sig: 'log(*args)', doc: 'Print to the log pane.' },
 };
 
