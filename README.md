@@ -30,6 +30,7 @@ language.
 | `06-sliders` | hand controls and automated ones |
 | `07-polyrhythm` | independent clocks drifting in and out |
 | `08-synths-and-effects` | every synth, envelopes, filter, reverb |
+| `09-python-loops` | `for`, `while` and comprehensions as composition |
 
 The full language reference is [DOCS.md](DOCS.md).
 
