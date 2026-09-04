@@ -299,7 +299,7 @@ def note(s):
     s = s.strip().lower()
     v = _NOTE_BASE[s[0]]
     i = 1
-    while i < len(s) and s[i] in 'sb#':
+    while i < len(s) and s[i] in 'sb#f':
         v += 1 if s[i] in 's#' else -1
         i += 1
     octv = int(s[i:]) if i < len(s) else 4

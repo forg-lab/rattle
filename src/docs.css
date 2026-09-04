@@ -1,0 +1,203 @@
+@import './editor.css';
+
+* { box-sizing: border-box; }
+
+html { scroll-behavior: smooth; scroll-padding-top: 70px; }
+
+body.docs {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 14px/1.6 ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+}
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 20px;
+  background: rgba(28, 31, 38, .94);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid var(--line);
+}
+
+.logo { font-weight: 650; color: var(--accent); text-decoration: none; }
+.crumb { color: var(--dim); font-size: 13px; }
+.spacer { flex: 1; }
+
+.status {
+  font: 12px var(--mono);
+  color: var(--dim);
+  min-width: 120px;
+  text-align: right;
+}
+.status.ok { color: var(--accent); }
+
+.docs-link { color: var(--dim); text-decoration: none; font-size: 13px; }
+.docs-link:hover { color: var(--accent); }
+
+button {
+  font: inherit;
+  font-size: 13px;
+  color: var(--fg);
+  background: #262b34;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 12px;
+  cursor: pointer;
+}
+button:hover { background: #2e343f; }
+
+#layout {
+  display: flex;
+  gap: 36px;
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 28px 24px 120px;
+  align-items: flex-start;
+}
+
+/* ------------------------------------------------------------------ nav */
+
+#nav {
+  position: sticky;
+  top: 66px;
+  width: 176px;
+  flex: 0 0 auto;
+  max-height: calc(100vh - 90px);
+  overflow-y: auto;
+  font-size: 13px;
+}
+
+.nav-group { margin-bottom: 18px; }
+
+.nav-title {
+  display: block;
+  color: var(--fg);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  margin-bottom: 5px;
+}
+
+.nav-item {
+  display: block;
+  color: var(--dim);
+  text-decoration: none;
+  padding: 2px 0 2px 10px;
+  border-left: 1px solid var(--line);
+  font: 12.5px var(--mono);
+}
+.nav-item:hover { color: var(--accent); border-color: var(--accent); }
+
+/* ---------------------------------------------------------------- entries */
+
+#main { flex: 1; min-width: 0; }
+
+section { margin-bottom: 46px; }
+
+h2 {
+  font-size: 22px;
+  margin: 0 0 6px;
+  letter-spacing: -.01em;
+}
+
+.section-blurb {
+  color: var(--dim);
+  margin: 0 0 20px;
+  max-width: 62ch;
+}
+
+.entry {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  padding: 16px 18px 14px;
+  margin-bottom: 16px;
+  transition: border-color .18s ease, box-shadow .18s ease;
+}
+
+.entry.is-playing {
+  border-color: #2f5d51;
+  box-shadow: 0 0 0 1px rgba(126, 224, 192, .25), 0 6px 26px rgba(0, 0, 0, .3);
+}
+
+.entry-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.entry-head h3 {
+  margin: 0;
+  font: 600 15px var(--mono);
+  color: var(--accent);
+}
+
+.sig {
+  font: 12px var(--mono);
+  color: var(--dim);
+}
+
+.entry-blurb {
+  margin: 7px 0 12px;
+  color: #b6bdc9;
+  max-width: 68ch;
+}
+
+.entry-editor {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  overflow: hidden;
+  background: #1a1d24;
+}
+.entry-editor .cm-editor { background: transparent; }
+.entry-editor .cm-editor.cm-focused { outline: none; }
+.entry-editor .cm-content { padding: 10px 12px; }
+
+.entry-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+button.play {
+  background: #23443c;
+  border-color: #2f5d51;
+  color: var(--accent);
+  min-width: 74px;
+}
+button.play:hover { background: #2a5348; }
+
+.is-playing button.play {
+  background: #4a2f2c;
+  border-color: #6b423d;
+  color: var(--err);
+}
+
+.hint { color: var(--dim); font-size: 12px; }
+.is-playing .hint { color: var(--accent); }
+
+.entry-log {
+  margin-top: 9px;
+  max-height: 96px;
+  overflow: auto;
+  font: 12px/1.5 var(--mono);
+  color: var(--dim);
+  white-space: pre-wrap;
+}
+.entry-log:empty { display: none; }
+.entry-log .err { color: var(--err); }
+.entry-log .warn { color: var(--hot); }
+
+@media (max-width: 860px) {
+  #nav { display: none; }
+  #layout { padding: 20px 16px 80px; }
+}

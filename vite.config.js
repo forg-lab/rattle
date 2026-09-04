@@ -1,4 +1,8 @@
 import { defineConfig } from 'vite';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = dirname(fileURLToPath(import.meta.url));
 
 // SharedArrayBuffer requires cross-origin isolation.
 const coi = {
@@ -27,4 +31,12 @@ export default defineConfig(({ command }) => ({
   plugins: [coi],
   server: { port: 5273 },
   worker: { format: 'es' },
+  build: {
+    rollupOptions: {
+      input: {
+        main: resolve(here, 'index.html'),
+        docs: resolve(here, 'docs.html'),
+      },
+    },
+  },
 }));

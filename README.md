@@ -4,7 +4,8 @@ A Sonic Pi-style live-coding environment in the browser, driven by Python.
 Fully client-side: MicroPython in a Web Worker, Web Audio for sound, no backend.
 
 **[Try it →](https://barnard-pl-labs.github.io/pysonic/)** ·
-**[Language reference →](DOCS.md)** ·
+**[Interactive reference →](https://barnard-pl-labs.github.io/pysonic/docs.html)** ·
+**[Reference as text →](DOCS.md)** ·
 **[Demos →](demos/)**
 
     npm install

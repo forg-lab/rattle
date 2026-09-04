@@ -1,5 +1,5 @@
 import { EditorView, basicSetup } from 'codemirror';
-import { EditorState, StateField, StateEffect, Prec, ChangeSet } from '@codemirror/state';
+import { EditorState, Prec, ChangeSet } from '@codemirror/state';
 import { Decoration, keymap } from '@codemirror/view';
 import { python } from '@codemirror/lang-python';
 import { indentUnit } from '@codemirror/language';
@@ -11,6 +11,9 @@ import {
 import { oneDark } from '@codemirror/theme-one-dark';
 import { pysonicCompletions } from './complete.js';
 import { sliderField, setSliders, sliderValues, configureSliders, applySliderValue } from './slider.js';
+import {
+  setSites, siteField, errField, siteMark, flashIn, clearFlashesIn, markErrorIn,
+} from './marks.js';
 import { Engine } from './audio.js';
 import './style.css';
 
@@ -32,41 +35,10 @@ const DEFAULT = DEMOS.length ? DEMOS[0].code : '# no demos found\n';
 
 // ---------------------------------------------------------------- highlight
 
-// One mark per call site, created once and then left alone. Flashing is done by
-// toggling a class on the rendered DOM, never by changing decorations: any
-// decoration change rebuilds the whole line, which detaches an inline slider
-// widget and aborts a drag in progress.
-const setSites = StateEffect.define();
-
 // Events carry offsets into the source as it was when Run was pressed. Keep the
 // edits made since, so a highlight still lands on the right characters when you
 // have been typing while the music plays.
 let sinceRun = null;
-
-// The line that failed to compile or blew up at runtime, marked until the next
-// successful run.
-const setErr = StateEffect.define();
-const errLine = Decoration.line({ class: 'cm-error-line' });
-
-const errField = StateField.define({
-  create: () => Decoration.none,
-  update(deco, tr) {
-    deco = deco.map(tr.changes);
-    for (const e of tr.effects) if (e.is(setErr)) deco = e.value;
-    return deco;
-  },
-  provide: (f) => EditorView.decorations.from(f),
-});
-
-const hlField = StateField.define({
-  create: () => Decoration.none,
-  update(deco, tr) {
-    deco = deco.map(tr.changes);
-    for (const e of tr.effects) if (e.is(setSites)) deco = e.value;
-    return deco;
-  },
-  provide: (f) => EditorView.decorations.from(f),
-});
 
 // ------------------------------------------------------------------ editor
 
@@ -79,7 +51,7 @@ const view = new EditorView({
       python(),
       indentUnit.of('    '),   // PEP 8, and Tab was giving 2
       oneDark,
-      hlField,
+      siteField,
       errField,
       sliderField,
       // defaultKeymap:false because it binds Enter to acceptCompletion, which
@@ -136,20 +108,10 @@ function say(text, cls = '') {
 }
 
 function markError(line) {
-  if (!(line >= 1) || line > view.state.doc.lines) {
-    view.dispatch({ effects: setErr.of(Decoration.none) });
-    return;
-  }
-  const l = view.state.doc.line(line);
-  view.dispatch({
-    effects: [
-      setErr.of(Decoration.set([errLine.range(l.from)])),
-      EditorView.scrollIntoView(l.from, { y: 'center' }),
-    ],
-  });
+  markErrorIn(view, line);
 }
 
-const clearError = () => view.dispatch({ effects: setErr.of(Decoration.none) });
+const clearError = () => markErrorIn(view, -1);
 
 // Runtime errors reported from inside Python carry transformed line numbers,
 // same as the ones the worker maps for compile failures.
@@ -277,27 +239,14 @@ function pushSites() {
   for (const s of siteRanges) {
     const a = Math.max(0, Math.min(mapPos(s.a, -1), len));
     const b = Math.max(0, Math.min(mapPos(s.b, 1), len));
-    if (b > a) marks.push(Decoration.mark({ class: 'cm-site cm-site-' + s.id }).range(a, b));
+    if (b > a) marks.push(siteMark(s.id).range(a, b));
   }
   view.dispatch({ effects: setSites.of(Decoration.set(marks, true)) });
   sitesDirty = false;
 }
 
-function flash(id) {
-  const on = view.dom.querySelectorAll('.cm-site-' + id);
-  if (!on.length) return;
-  for (const el of on) el.classList.add('is-on');
-  clearTimeout(flashTimers.get(id));
-  flashTimers.set(id, setTimeout(() => {
-    for (const el of view.dom.querySelectorAll('.cm-site-' + id)) el.classList.remove('is-on');
-  }, 160));
-}
-
-function clearFlashes() {
-  for (const t of flashTimers.values()) clearTimeout(t);
-  flashTimers.clear();
-  for (const el of view.dom.querySelectorAll('.cm-site.is-on')) el.classList.remove('is-on');
-}
+const flash = (id) => flashIn(view, id, flashTimers);
+const clearFlashes = () => clearFlashesIn(view, flashTimers);
 
 function consume(data) {
   let newSliders = false;

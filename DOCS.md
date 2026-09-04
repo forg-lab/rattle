@@ -4,8 +4,12 @@ Python, minus the waiting. You write ordinary code; `sleep` moves a logical
 clock rather than blocking the browser, and everything is scheduled ahead of
 what you hear.
 
-Nine worked pieces live in [`demos/`](demos/) and load from the menu in the
-app. They are meant to be read as much as heard — start with `01-hello`.
+**Every function here is also a box you can play and edit:
+[the interactive reference](https://barnard-pl-labs.github.io/pysonic/docs.html).**
+This page is the same material as text.
+
+Ten worked pieces live in [`demos/`](demos/) and load from the menu in the app.
+They are meant to be read as much as heard — start with `01-hello`.
 
 ---
 
