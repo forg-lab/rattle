@@ -126,31 +126,36 @@ Pushing to `main` builds and publishes to GitHub Pages via
 pages; the worker resolves its wasm through `import.meta.env.BASE_URL`, so
 nothing is hardcoded to the root.
 
-## State between iterations
+## Signals
 
-`global` works as written. The transform wraps the program in `def __main__()`
-so top-level `sleep` is legal, which would otherwise demote every top-level name
-to a local of that function — so it scans what the top level binds and
-redeclares those names global:
+Anything that varies is a function of time, not an accumulating counter. Any
+parameter accepts a number or a function of this thread's position in beats:
 
-    x = 0
+    play(60, cutoff=saw(4, 50, 110))          # ramps 50..110 every 4 beats
+    play(seq([60, 63, 67], 0.5), amp=sine(4, 0.2, 0.8))
+    play(60, pan=lambda t: (t % 2) - 1)       # any callable works
 
-    @live_loop("bass")
-    def bass():
-        global x
-        x += 1
-        play(60, cutoff=50 + (x * 4) % 60)
-        sleep(0.25)
+`saw` `isaw` `sine` `tri` `square` `seq` `hold`, and `lift` to combine them
+with an ordinary function. They hold no state: the same beat always yields the
+same value, so a sweep survives a hot swap with its phase intact and cannot
+drift off the grid. Nothing needs a `global`.
 
-`tick()` does the same job without the global, per thread, and keeps its phase
-across a hot swap:
+(`global` does work if you want it — the transform hoists top-level names out
+of the `__main__` wrapper — but reaching for one is usually a sign a signal
+would read better.)
 
-    play(60, cutoff=50 + (tick() * 4) % 60)
+## Automated sliders
 
-Note that `slider()`'s first argument is only the value it *starts* at — once
-registered it holds its own value, or the drag would be overwritten on every
-iteration. A slider is a hand control; to modulate something from code, compute
-the number.
+Hand `slider()` a signal instead of a literal and it drives itself, overriding
+the hand value and moving to match:
+
+    cutoff=slider(74, 50, 110, label="cutoff")             # you drive it
+    cutoff=slider(saw(4, 50, 110), 50, 110, label="cut")   # it drives itself
+
+An automated slider is marked `~`. Its thumb is moved by writing to the DOM at
+*sounding* time, so it tracks what you hear rather than the lookahead. Dragging
+one still works and is simply overridden on the next iteration — but the
+release never writes back, since that would replace the signal with a number.
 
 ## Known limitations
 

@@ -197,6 +197,16 @@ aside {
   cursor: ew-resize;
 }
 
+/* driven by a signal rather than by hand */
+.cm-slider.is-auto {
+  border-color: #2f5d51;
+  background: #1e2a2b;
+}
+.cm-slider.is-auto input[type="range"]::-webkit-slider-thumb { background: var(--hot); }
+.cm-slider.is-auto input[type="range"]::-moz-range-thumb { background: var(--hot); }
+.cm-slider.is-auto .cm-slider-val { color: var(--hot); }
+.cm-slider.is-auto .cm-slider-label { color: var(--hot); opacity: .8; }
+
 .cm-slider-val {
   font: 11px var(--mono);
   color: var(--accent);

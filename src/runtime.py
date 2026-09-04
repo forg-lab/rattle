@@ -7,6 +7,7 @@
 
 import sys
 import io
+import math
 
 _EV = []          # (logical_seconds, kind, loc, params)
 _LOG = []
@@ -37,7 +38,7 @@ def _prime(now):
 def _reset():
     global _CUR, _EV
     _SLIDERS.clear()
-    _TICKS.clear()
+    _SLIDER_AUTO.clear()
     _TASKS.clear()
     del _ORDER[:]
     del _EV[:]
@@ -389,20 +390,73 @@ def choose(seq):
     return seq[int(_rnd() * len(seq))]
 
 
-# Per-thread counters, the Sonic Pi way to advance something each iteration
-# without reaching for a global. Survives a hot swap so a sweep keeps its phase.
-_TICKS = {}
+# ---------------------------------------------------------------- signals
+#
+# A parameter may be a number or a function of time, where time is this
+# thread's logical position in beats. Nothing here holds state: the same beat
+# always yields the same value, so a sweep survives a hot swap with its phase
+# intact and never drifts from the grid.
 
 
-def tick(name='default'):
-    k = _CUR.name + '/' + name
-    v = _TICKS.get(k, -1) + 1
-    _TICKS[k] = v
-    return v
+def _beats():
+    return _CUR.t * (_CUR.bpm / 60.0)
 
 
-def look(name='default'):
-    return _TICKS.get(_CUR.name + '/' + name, -1)
+def _val(x):
+    return x(_beats()) if callable(x) else x
+
+
+def saw(period=4.0, lo=0.0, hi=1.0):
+    def f(t):
+        return lo + (hi - lo) * ((t % period) / period)
+    return f
+
+
+def isaw(period=4.0, lo=0.0, hi=1.0):
+    def f(t):
+        return hi - (hi - lo) * ((t % period) / period)
+    return f
+
+
+def sine(period=4.0, lo=0.0, hi=1.0, phase=0.0):
+    def f(t):
+        a = (t / period + phase) * 2.0 * math.pi
+        return lo + (hi - lo) * (0.5 + 0.5 * math.sin(a))
+    return f
+
+
+def tri(period=4.0, lo=0.0, hi=1.0):
+    def f(t):
+        ph = (t % period) / period
+        return lo + (hi - lo) * (2.0 * ph if ph < 0.5 else 2.0 * (1.0 - ph))
+    return f
+
+
+def square(period=4.0, lo=0.0, hi=1.0, width=0.5):
+    def f(t):
+        return hi if ((t % period) / period) < width else lo
+    return f
+
+
+def seq(values, step=1.0):
+    xs = values.xs if isinstance(values, Ring) else list(values)
+
+    def f(t):
+        return xs[int(t / step) % len(xs)]
+    return f
+
+
+def hold(value):
+    def f(t):
+        return value
+    return f
+
+
+def lift(fn, *sources):
+    # combine signals or constants with an ordinary function
+    def f(t):
+        return fn(*[s(t) if callable(s) else s for s in sources])
+    return f
 
 
 def use_synth(name):
@@ -418,10 +472,14 @@ def log(*args):
 
 
 def _emit(kind, params, loc):
-    _EV.append((_CUR.t, kind, loc, params))
+    out = {}
+    for k in params:
+        out[k] = _val(params[k])
+    _EV.append((_CUR.t, kind, loc, out))
 
 
 def play(n=60, _loc=None, **kw):
+    n = _val(n)
     if n is None:
         return
     if isinstance(n, Ring):
@@ -439,7 +497,7 @@ def play(n=60, _loc=None, **kw):
 
 
 def sample(name='bd', _loc=None, **kw):
-    kw['name'] = name
+    kw['name'] = _val(name)
     _emit('sample', kw, _loc)
 
 
@@ -448,12 +506,19 @@ def sample(name='bd', _loc=None, **kw):
 _SLIDERS = {}
 
 
+_SLIDER_AUTO = {}
+
+
 def slider(value=0.5, lo=0.0, hi=1.0, step=None, label=None, _loc=None):
+    """A number you can grab. Hand it a function of time instead of a literal
+    and it drives itself, overriding the hand value and moving to match."""
     key = ('%d:%d' % (_loc[0], _loc[1])) if _loc else 'anon'
-    cur = _SLIDERS.get(key)
-    if cur is None:
-        cur = float(value)
+    auto = callable(value)
+
+    if key not in _SLIDERS:
+        cur = float(_val(value))
         _SLIDERS[key] = cur
+        _SLIDER_AUTO[key] = auto
         if step is None:
             lof = float(lo)
             hif = float(hi)
@@ -463,9 +528,20 @@ def slider(value=0.5, lo=0.0, hi=1.0, step=None, label=None, _loc=None):
                 step = 1
             else:
                 step = (hif - lof) / 100.0
-        _LOG.append('S|%s|%s|%s|%s|%s|%s' % (
-            key, str(lo), str(hi), str(step), str(cur), label or ''))
-    return cur
+        _LOG.append('S|%s|%s|%s|%s|%s|%s|%d' % (
+            key, str(lo), str(hi), str(step), str(cur), label or '', 1 if auto else 0))
+        return cur
+
+    if auto:
+        cur = float(value(_beats()))
+        if abs(cur - _SLIDERS[key]) > 1e-9:
+            _SLIDERS[key] = cur
+            # timestamped so the thumb moves in step with what is heard, not
+            # a lookahead window early
+            _LOG.append('V|%s|%f|%f' % (key, cur, _CUR.t))
+        return cur
+
+    return _SLIDERS[key]
 
 
 def _set_slider(key, v):

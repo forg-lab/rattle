@@ -10,7 +10,7 @@ import {
 } from '@codemirror/autocomplete';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { pysonicCompletions } from './complete.js';
-import { sliderField, setSliders, sliderValues, configureSliders } from './slider.js';
+import { sliderField, setSliders, sliderValues, configureSliders, applySliderValue } from './slider.js';
 import { Engine } from './audio.js';
 import './style.css';
 
@@ -214,6 +214,9 @@ function clearSliders() {
 function commitSlider(key, value, formatted) {
   const sp = sliderSpecs.get(key);
   if (!sp) return;
+  // An automated slider's first argument is the signal driving it. Writing a
+  // number there would delete the automation.
+  if (sp.auto) return;
   const from = mapPos(sp.start, -1);
   const to = mapPos(sp.end, 1);
   if (from < 0 || to > view.state.doc.length || to <= from) return;
@@ -286,6 +289,7 @@ worker.onmessage = (ev) => {
 // -------------------------------------------------------------- event sink
 
 const hq = [];              // pending flashes, sorted by sounding time
+const vq = [];              // pending automated-slider moves
 const siteIndex = new Map();  // "a:b" -> id
 const siteRanges = [];        // { a, b, id } in run-time offsets
 const flashTimers = new Map();
@@ -326,13 +330,19 @@ function consume(data) {
     const f = line.split('|');
     if (f[0] === 'L') { say(line.slice(2)); continue; }
     if (f[0] === 'S') {
-      const [, key, lo, hi, step, value, label] = f;
+      const [, key, lo, hi, step, value, label, auto] = f;
       const [start, end] = key.split(':').map(Number);
       sliderSpecs.set(key, {
-        key, start, end, label,
+        key, start, end, label, auto: auto === '1',
         lo: Number(lo), hi: Number(hi), step: Number(step), value: Number(value),
       });
       newSliders = true;
+      continue;
+    }
+    if (f[0] === 'V') {
+      // an automated slider moved; land it when the note is heard, not when
+      // the scheduler computed it a lookahead window ago
+      vq.push({ at: engine.t0 + parseFloat(f[3]), key: f[1], value: parseFloat(f[2]) });
       continue;
     }
     if (f[0] === 'X') {
@@ -377,6 +387,7 @@ function consume(data) {
     }
   }
   hq.sort((x, y) => x.at - y.at);
+  vq.sort((x, y) => x.at - y.at);
   if (newSliders) pushSliders();
   // Only ever dispatched when a call site is seen for the first time, and never
   // while a slider is being dragged.
@@ -402,6 +413,10 @@ function frame() {
   // Fire the flash when the note is AUDIBLE, not when it is rendered.
   const audible = ct - engine.latency();
   while (hq.length && hq[0].at <= audible + 0.01) flash(hq.shift().id);
+  while (vq.length && vq[0].at <= audible + 0.01) {
+    const v = vq.shift();
+    applySliderValue(view.dom, v.key, v.value);
+  }
 
   requestAnimationFrame(frame);
 }
@@ -427,6 +442,7 @@ function run() {
   siteIndex.clear();
   siteRanges.length = 0;
   hq.length = 0;
+  vq.length = 0;
   view.dispatch({ effects: setSites.of(Decoration.none) });
   sinceRun = ChangeSet.empty(view.state.doc.length);
   worker.postMessage({ type: 'run', code: view.state.doc.toString() });
@@ -436,6 +452,7 @@ function stop() {
   worker.postMessage({ type: 'stop' });
   engine.panic();
   hq.length = 0;
+  vq.length = 0;
   clearFlashes();
   statusEl.textContent = 'stopped';
   statusEl.className = 'status';

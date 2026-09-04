@@ -27,6 +27,9 @@ export const SAMPLES = [
   ['click', 'rim / click'],
 ];
 
+// Functions of time. Any parameter accepts one in place of a number.
+export const SIGNALS = ['saw', 'isaw', 'sine', 'tri', 'square', 'seq', 'hold', 'lift'];
+
 export const SCALES = [
   'major', 'minor', 'major_pentatonic', 'minor_pentatonic',
   'dorian', 'phrygian', 'mixolydian', 'blues', 'chromatic',
@@ -67,13 +70,16 @@ export const FUNCS = {
   ring: { sig: 'ring(seq)', doc: 'A list that wraps on out-of-range indexing, so r[9] works on a 4-element ring.' },
   slider: {
     sig: 'slider(value, lo=0, hi=1, step=None, label=None)',
-    doc: 'A draggable control, rendered inline right where you wrote it. Returns its current value, so drop it anywhere a number goes. Dragging retunes the running music; releasing writes the new value back into the code, so it survives a re-run.',
+    doc: 'A draggable control, rendered inline right where you wrote it. Returns its current value, so drop it anywhere a number goes. Dragging retunes the running music; releasing writes the new value back into the code. Hand it a signal instead of a literal — slider(saw(4, 50, 110), 50, 110) — and it drives itself, overriding the hand value and moving to match.',
   },
-  tick: {
-    sig: 'tick(name="default")',
-    doc: 'Advance this thread\u2019s counter and return it, starting at 0. The way to move something along each iteration without a global. Index a ring with it and it wraps: notes[tick()].',
-  },
-  look: { sig: 'look(name="default")', doc: 'Read the current tick without advancing it.' },
+  saw: { sig: 'saw(period=4, lo=0, hi=1)', doc: 'A rising ramp over `period` beats, as a function of time. Pass it anywhere a number goes.' },
+  isaw: { sig: 'isaw(period=4, lo=0, hi=1)', doc: 'A falling ramp over `period` beats.' },
+  sine: { sig: 'sine(period=4, lo=0, hi=1, phase=0)', doc: 'A sine sweep over `period` beats.' },
+  tri: { sig: 'tri(period=4, lo=0, hi=1)', doc: 'A triangle sweep over `period` beats.' },
+  square: { sig: 'square(period=4, lo=0, hi=1, width=0.5)', doc: 'Alternates hi then lo across `period` beats.' },
+  seq: { sig: 'seq(values, step=1)', doc: 'Step through a list over time, one entry per `step` beats. Wraps.' },
+  hold: { sig: 'hold(value)', doc: 'A constant as a signal, for where one is expected.' },
+  lift: { sig: 'lift(fn, *sources)', doc: 'Combine signals or constants with an ordinary function: lift(lambda a, b: a + b, saw(4, 0, 20), 60).' },
   log: { sig: 'log(*args)', doc: 'Print to the log pane.' },
 };
 

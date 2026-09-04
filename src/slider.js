@@ -42,21 +42,23 @@ class SliderWidget extends WidgetType {
     const a = this.spec;
     const b = other.spec;
     return a.key === b.key && a.lo === b.lo && a.hi === b.hi && a.step === b.step
-      && a.label === b.label;
+      && a.label === b.label && a.auto === b.auto;
   }
 
   toDOM() {
-    const { key, lo, hi, step, label } = this.spec;
+    const { key, lo, hi, step, label, auto } = this.spec;
     const dp = decimalsFor(step);
     const fmt = (v) => Number(v).toFixed(dp);
 
     const wrap = document.createElement('span');
-    wrap.className = 'cm-slider';
+    wrap.className = auto ? 'cm-slider is-auto' : 'cm-slider';
+    wrap.dataset.key = key;
 
-    if (label) {
+    if (label || auto) {
       const l = document.createElement('span');
       l.className = 'cm-slider-label';
-      l.textContent = label;
+      l.textContent = auto ? (label ? label + ' ~' : '~') : label;
+      l.title = auto ? 'driven by a signal; a drag is overridden on the next iteration' : '';
       wrap.append(l);
     }
 
@@ -123,3 +125,17 @@ export const sliderField = StateField.define({
   },
   provide: (f) => EditorView.decorations.from(f),
 });
+
+// Move an automated slider's thumb. Written straight to the DOM rather than
+// through a decoration, for the same reason the sounding flash is: any
+// decoration change rebuilds the line and detaches the widget.
+export function applySliderValue(root, key, value) {
+  const wrap = root.querySelector('.cm-slider[data-key="' + key + '"]');
+  if (!wrap) return;
+  const input = wrap.querySelector('input');
+  const out = wrap.querySelector('.cm-slider-val');
+  if (!input) return;
+  sliderValues.set(key, value);
+  input.value = String(value);
+  if (out) out.textContent = Number(value).toFixed(decimalsFor(input.step));
+}
