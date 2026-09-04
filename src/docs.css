@@ -168,6 +168,13 @@ h2 {
   margin-top: 10px;
 }
 
+button.update {
+  background: #2a3550;
+  border-color: #3c4a6b;
+  color: #a9c2ff;
+}
+button.update:hover { background: #33405f; }
+
 button.play {
   background: #23443c;
   border-color: #2f5d51;
@@ -176,11 +183,13 @@ button.play {
 }
 button.play:hover { background: #2a5348; }
 
+/* the primary button becomes Stop while this box holds playback */
 .is-playing button.play {
   background: #4a2f2c;
   border-color: #6b423d;
   color: var(--err);
 }
+.is-playing button.play:hover { background: #5a3a36; }
 
 .hint { color: var(--dim); font-size: 12px; }
 .is-playing .hint { color: var(--accent); }
@@ -195,6 +204,7 @@ button.play:hover { background: #2a5348; }
 }
 .entry-log:empty { display: none; }
 .entry-log .err { color: var(--err); }
+.entry-log .ok { color: var(--accent); }
 .entry-log .warn { color: var(--hot); }
 
 @media (max-width: 860px) {

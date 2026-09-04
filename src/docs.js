@@ -46,6 +46,8 @@ function makeBox(entry) {
     view: null,
     logEl: null,
     btn: null,
+    updateBtn: null,
+    hint: null,
     root: null,
     siteIndex: new Map(),
     siteRanges: [],
@@ -105,12 +107,18 @@ function say(box, text, cls = '') {
 
 // ----------------------------------------------------------------- playback
 
+const HINT_IDLE = 'editable — change it and press Play';
+const HINT_LIVE = 'edit it and press Update: loops swap in at their next boundary, mid-beat';
+
+// Starting a box that is already playing is a hot swap, not a restart — the
+// worker replaces the program while every live_loop keeps its own clock.
 function play(box) {
   if (!ready) {
     say(box, 'still booting MicroPython…', 'warn');
     return;
   }
-  if (active && active !== box) stopAll({ keepStatus: true });
+  const isUpdate = active === box;
+  if (active && !isUpdate) stopAll({ keepStatus: true });
 
   if (!started) {
     engine.start();
@@ -121,8 +129,10 @@ function play(box) {
   active = box;
   box.root.classList.add('is-playing');
   box.btn.textContent = 'Stop';
+  box.updateBtn.hidden = false;
+  box.hint.textContent = HINT_LIVE;
   resetBox(box);
-  box.logEl.innerHTML = '';
+  if (!isUpdate) box.logEl.innerHTML = '';
 
   const rel = engine.ctx.currentTime - engine.t0;
   if (isolated) f64[0] = rel;
@@ -131,6 +141,7 @@ function play(box) {
 
   runId += 1;
   worker.postMessage({ type: 'run', code: box.view.state.doc.toString(), runId });
+  if (isUpdate) say(box, '\u21bb updated', 'ok');
   statusEl.textContent = 'playing · ' + box.entry.name;
   statusEl.className = 'status ok';
 }
@@ -141,6 +152,8 @@ function stopAll(opts = {}) {
   if (active) {
     active.root.classList.remove('is-playing');
     active.btn.textContent = 'Play';
+    active.updateBtn.hidden = true;
+    active.hint.textContent = HINT_IDLE;
     active.hq.length = 0;
     active.vq.length = 0;
     clearFlashesIn(active.view, active.flashTimers);
@@ -374,10 +387,21 @@ for (const section of SECTIONS) {
     btn.textContent = 'Play';
     btn.onclick = () => (active === box ? stopAll() : play(box));
     box.btn = btn;
+
+    const updateBtn = document.createElement('button');
+    updateBtn.className = 'update';
+    updateBtn.textContent = 'Update';
+    updateBtn.title = 'Re-run without restarting: live_loops swap in at their next boundary';
+    updateBtn.hidden = true;
+    updateBtn.onclick = () => play(box);
+    box.updateBtn = updateBtn;
+
     const hint = document.createElement('span');
     hint.className = 'hint';
-    hint.textContent = 'editable — change it and press Play';
-    bar.append(btn, hint);
+    hint.textContent = HINT_IDLE;
+    box.hint = hint;
+
+    bar.append(btn, updateBtn, hint);
 
     const logEl = document.createElement('div');
     logEl.className = 'entry-log';
@@ -422,4 +446,4 @@ for (const section of SECTIONS) {
   main.append(sec);
 }
 
-if (import.meta.env.DEV) window.__docs = { boxes, play, stopAll, engine };
+if (import.meta.env.DEV) window.__docs = { boxes, play, stopAll, engine, worker };
