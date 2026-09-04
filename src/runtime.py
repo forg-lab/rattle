@@ -1,4 +1,4 @@
-# pysonic runtime: logical-time scheduler + the live-coding DSL.
+# rattle runtime: logical-time scheduler + the live-coding DSL.
 #
 # Every thread (the script itself, and each live_loop) is a generator. Yielding
 # a number means "advance my logical clock by that many beats". Nothing here

@@ -1,10 +1,10 @@
-# pysonic
+# rattle
 
 A Sonic Pi-style live-coding environment in the browser, driven by Python.
 Fully client-side: MicroPython in a Web Worker, Web Audio for sound, no backend.
 
-**[Try it →](https://barnard-pl-labs.github.io/pysonic/)** ·
-**[Interactive reference →](https://barnard-pl-labs.github.io/pysonic/docs.html)** ·
+**[Try it →](https://forg-lab.github.io/rattle/)** ·
+**[Interactive reference →](https://forg-lab.github.io/rattle/docs.html)** ·
 **[Reference as text →](DOCS.md)** ·
 **[Demos →](demos/)**
 
@@ -146,7 +146,7 @@ load, and the status bar says which clock is in use.
 ## Deploying
 
 Pushing to `main` builds and publishes to GitHub Pages via
-`.github/workflows/deploy.yml`. The build sets `base: '/pysonic/'` for project
+`.github/workflows/deploy.yml`. The build sets `base: '/rattle/'` for project
 pages; the worker resolves its wasm through `import.meta.env.BASE_URL`, so
 nothing is hardcoded to the root.
 

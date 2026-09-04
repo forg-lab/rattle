@@ -1,4 +1,4 @@
-# pysonic - live coding in Python.
+# rattle - live coding in Python.
 # Cmd+Enter (Ctrl+Enter) runs it, Cmd+. stops it. Edit while it plays:
 # live_loops swap in at the next boundary without dropping the beat.
 # Pick another piece from the menu above to see more of the language.

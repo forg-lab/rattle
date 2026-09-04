@@ -9,7 +9,7 @@ import {
   startCompletion, moveCompletionSelection,
 } from '@codemirror/autocomplete';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { pysonicCompletions } from './complete.js';
+import { rattleCompletions } from './complete.js';
 import { sliderField, setSliders, sliderValues, configureSliders, applySliderValue } from './slider.js';
 import {
   setSites, siteField, errField, siteMark, flashIn, clearFlashesIn, markErrorIn,
@@ -58,7 +58,7 @@ const view = new EditorView({
       // steals every newline you type while the popup is open. Tab accepts
       // instead; Enter always means Enter.
       autocompletion({
-        override: [pysonicCompletions],
+        override: [rattleCompletions],
         activateOnTyping: true,
         defaultKeymap: false,
       }),
@@ -410,7 +410,7 @@ demoSel.onchange = () => {
   view.focus();
 };
 
-if (import.meta.env.DEV) window.__pysonic = { view, engine, run, stop, worker };
+if (import.meta.env.DEV) window.__rattle = { view, engine, run, stop, worker };
 
 // CodeMirror's Mod- prefix already resolves to Ctrl off macOS; the labels did not.
 document.getElementById('kbd-run').textContent = isMac ? '\u2318\u23CE' : 'Ctrl+\u23CE';

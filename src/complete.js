@@ -47,7 +47,7 @@ function openQuote(line) {
 
 const opt = (label, detail, info, apply) => ({ label, detail, info, apply, type: 'variable' });
 
-export function pysonicCompletions(context) {
+export function rattleCompletions(context) {
   const text = context.state.doc.toString();
   const pos = context.pos;
   const before = text.slice(Math.max(0, pos - 200), pos);

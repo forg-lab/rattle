@@ -27,7 +27,7 @@ const coi = {
 // GitHub project pages serve from /<repo>/, so the built asset URLs need that
 // prefix; the dev server stays at the root.
 export default defineConfig(({ command }) => ({
-  base: command === 'build' ? '/pysonic/' : '/',
+  base: command === 'build' ? '/rattle/' : '/',
   plugins: [coi],
   server: { port: 5273 },
   worker: { format: 'es' },
