@@ -195,8 +195,27 @@ one_in(3)              # True with probability 1/3
 choose([60, 63, 67])   # a random element
 ```
 
-Deterministic by design. Put `use_random_seed` at the top of a loop body and the
-phrase repeats exactly; move or delete it and it reshuffles every pass.
+Deterministic by design, and **scoped to one thread**. Put `use_random_seed` at
+the top of a loop body and that phrase repeats exactly; move or delete it and it
+reshuffles every pass. Other loops are unaffected either way.
+
+Each `live_loop` draws from its own stream, seeded from its name and from the
+thread that started it. That matters more than it sounds: on a shared stream,
+what a loop played would depend on how many times its neighbours happened to
+roll in between — so a loop's own music would change when you edited a
+*different* loop, and `use_random_seed` in one place would silently reseed
+everywhere.
+
+Seeding at the **top level** makes the whole piece reproducible, since loops
+inherit from the thread that spawns them:
+
+```python
+use_random_seed(42)     # every loop defined below derives from this
+```
+
+Reseeding a loop takes effect where you wrote it, so a seed changed at the top
+level applies to loops started after it. Press Stop and run again to reseed
+everything.
 
 ---
 

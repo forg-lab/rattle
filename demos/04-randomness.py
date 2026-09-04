@@ -1,9 +1,14 @@
 # 4 - randomness
 #
-# The generator is deterministic: the same seed always gives the same music.
-# use_random_seed at the top of a loop makes a phrase repeat exactly. Change
-# the number for a different phrase; delete the line and it reshuffles on
-# every pass.
+# Randomness is deterministic and scoped to one thread.
+#
+# use_random_seed at the top of a loop makes that phrase repeat exactly. Change
+# the number for a different phrase; delete the line and it reshuffles on every
+# pass. Either way the drums below are untouched — each live_loop draws from its
+# own stream, so loops can never perturb each other's choices.
+#
+# Seeding at the top level instead makes the whole piece reproducible, since
+# loops inherit from the thread that started them.
 
 use_bpm(120)
 

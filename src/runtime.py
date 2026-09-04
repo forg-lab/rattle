@@ -29,6 +29,7 @@ class Task:
         self.dead = False
         self.bpm = 60.0
         self.synth = 'saw'
+        self.seed = 1
 
 
 def _prime(now):
@@ -78,6 +79,9 @@ def _spawn(nm, fn, sync, delay):
         # loop never emits into the past and lands in phase
         t0 = (int(_frontier() / spb) + 1) * spb
     tk = Task(nm, fn, t0 + delay * spb)
+    # derived from the spawning thread, so seeding at the top level makes the
+    # whole piece reproducible, while the name keeps siblings independent
+    tk.seed = _mix(nm, _CUR.seed if _CUR is not None else _BASE_SEED)
     if _CUR is not None:
         tk.bpm = _CUR.bpm
         tk.synth = _CUR.synth
@@ -186,6 +190,7 @@ def _run_main(fn, run_id=0):
     if old is not None:
         old.dead = True
     tk = Task(MAIN, fn, _NOW)
+    tk.seed = _mix(MAIN, _BASE_SEED)
     _TASKS[MAIN] = tk
     if MAIN not in _ORDER:
         _ORDER.append(MAIN)
@@ -354,24 +359,44 @@ def chord(root, name='major'):
     return Ring([r + x for x in _CHORDS[name]])
 
 
-_seed = 20260903
+# Randomness is per thread. A shared stream would mean one loop's draws
+# perturbed another's, so what a live_loop played would depend on how many
+# times its neighbours happened to roll in between — and use_random_seed in one
+# loop would silently reseed every other. Each thread gets its own stream,
+# derived from its name so it is reproducible but decorrelated from its
+# siblings.
+_BASE_SEED = 20260904
+_ORPHAN = _BASE_SEED
 
 
-def _rnd():
+def _mix(name, seed):
+    h = (seed ^ 2166136261) & 0xFFFFFFFF
+    for c in name:
+        h = ((h ^ ord(c)) * 16777619) & 0xFFFFFFFF
+    return h or 1
+
+
+def _advance(x):
     # xorshift32: an LCG's low bits cluster badly at the small sample counts a
     # bar of music actually draws
-    global _seed
-    x = _seed
     x = (x ^ (x << 13)) & 0xFFFFFFFF
     x = x ^ (x >> 17)
     x = (x ^ (x << 5)) & 0xFFFFFFFF
-    _seed = x
-    return x / 4294967296.0
+    return x or 1
+
+
+def _rnd():
+    global _ORPHAN
+    if _CUR is None:
+        _ORPHAN = _advance(_ORPHAN)
+        return _ORPHAN / 4294967296.0
+    _CUR.seed = _advance(_CUR.seed)
+    return _CUR.seed / 4294967296.0
 
 
 def use_random_seed(s):
-    global _seed
-    _seed = (int(s) & 0xFFFFFFFF) or 1
+    """Reseed this thread only. Other live_loops are unaffected."""
+    _CUR.seed = (int(s) & 0xFFFFFFFF) or 1
 
 
 def rrand(lo=0.0, hi=1.0):
