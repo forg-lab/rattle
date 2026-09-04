@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2316181d'/%3E%3Cpath d='M6 21c3-11 5.5-11 8.5 0s5.5 11 8.5 0' stroke='%237ee0c0' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
+    <title>pysonic</title>
+    <!-- Must run before anything else: adds COOP/COEP on hosts that cannot. -->
+    <script src="./coi-serviceworker.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <header>
+        <span class="logo">pysonic</span>
+        <button id="run" class="primary">Run <kbd id="kbd-run"></kbd></button>
+        <button id="stop">Stop <kbd id="kbd-stop"></kbd></button>
+        <span class="spacer"></span>
+        <span id="clock" class="meter">0.00s</span>
+        <span id="ahead" class="meter" title="how far the least advanced thread is ahead of the audio clock; negative means underrun">headroom 0ms</span>
+        <span id="status" class="status">booting…</span>
+      </header>
+      <main>
+        <div id="editor"></div>
+        <aside>
+          <div class="pane-title">log</div>
+          <div id="log"></div>
+        </aside>
+      </main>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
