@@ -15,6 +15,7 @@ import {
   setSites, siteField, errField, siteMark, flashIn, clearFlashesIn, markErrorIn,
 } from './marks.js';
 import { Engine } from './audio.js';
+import { Visuals } from './visuals.js';
 import './style.css';
 
 const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || '');
@@ -66,6 +67,8 @@ const view = new EditorView({
       Prec.highest(keymap.of([
         { key: 'Mod-Enter', preventDefault: true, run: () => (run(), true) },
         { key: 'Mod-.', preventDefault: true, run: () => (stop(), true) },
+        { key: 'Mod-Shift-v', preventDefault: true, run: () => (setViz(!vizOn), true) },
+        { key: 'Mod-\\', preventDefault: true, run: () => (togglePerform(), true) },
         // CodeMirror leaves Tab unbound on purpose (it moves focus, for
         // keyboard accessibility). In a Python editor that makes indentation
         // impossible, so take it over — and let Escape hand focus back.
@@ -76,7 +79,16 @@ const view = new EditorView({
           shift: indentLess,
         },
         { key: 'Ctrl-Space', run: startCompletion },
-        { key: 'Escape', run: closeCompletion },
+        {
+          key: 'Escape',
+          run: (v) => {
+            if (document.body.classList.contains('perform')) {
+              document.body.classList.remove('perform');
+              return true;
+            }
+            return closeCompletion(v);
+          },
+        },
         { key: 'ArrowDown', run: moveCompletionSelection(true) },
         { key: 'ArrowUp', run: moveCompletionSelection(false) },
         { key: 'PageDown', run: moveCompletionSelection(true, 'page') },
@@ -93,6 +105,25 @@ const view = new EditorView({
 // ------------------------------------------------------------------- audio
 
 const engine = new Engine();
+const visuals = new Visuals(document.getElementById('viz'));
+
+// Visuals stay off until asked for: with the class absent the app renders
+// exactly as it did before this feature existed.
+let vizOn = false;
+
+function setViz(on) {
+  vizOn = on;
+  document.body.classList.toggle('viz-on', on);
+  if (!on) {
+    document.body.classList.remove('perform');
+    visuals.panic();
+  }
+}
+
+function togglePerform() {
+  if (!vizOn) setViz(true);
+  document.body.classList.toggle('perform');
+}
 const logEl = document.getElementById('log');
 const statusEl = document.getElementById('status');
 const clockEl = document.getElementById('clock');
@@ -228,6 +259,7 @@ worker.onmessage = (ev) => {
 
 const hq = [];              // pending flashes, sorted by sounding time
 const vq = [];              // pending automated-slider moves
+const gq = [];              // pending shapes and frame-state, sorted the same way
 const siteIndex = new Map();  // "a:b" -> id
 const siteRanges = [];        // { a, b, id } in run-time offsets
 const flashTimers = new Map();
@@ -296,8 +328,13 @@ function consume(data) {
 
     const when = Math.max(engine.t0 + t, engine.ctx.currentTime + 0.005);
     try {
+      // Explicit, not an else: a bare fallthrough sends every unknown kind to
+      // the sampler, so a drawing call would try to play as a drum.
       if (kind === 'synth') engine.playSynth(when, p);
-      else engine.playSample(when, p);
+      else if (kind === 'sample') engine.playSample(when, p);
+      else if (kind === 'viz') gq.push({ at: when, draw: p });
+      else if (kind === 'vizstate') gq.push({ at: when, state: p });
+      // anything else is a runtime we do not know about: drop it, never guess
     } catch (e) {
       say('audio: ' + e.message, 'err');
     }
@@ -315,6 +352,7 @@ function consume(data) {
   }
   hq.sort((x, y) => x.at - y.at);
   vq.sort((x, y) => x.at - y.at);
+  gq.sort((x, y) => x.at - y.at);
   if (newSliders) pushSliders();
   // Only ever dispatched when a call site is seen for the first time, and never
   // while a slider is being dragged.
@@ -344,6 +382,14 @@ function frame() {
     const v = vq.shift();
     applySliderValue(view.dom, v.key, v.value);
   }
+  // Drain before drawing, so a bg() and the circle() on the same beat land in
+  // the same frame. Same `audible` as the flash above and the note itself.
+  while (gq.length && gq[0].at <= audible + 0.01) {
+    const g = gq.shift();
+    if (g.draw) visuals.spawn(g.at, g.draw);
+    else visuals.setState(g.state);
+  }
+  if (vizOn) visuals.tick(audible);
 
   requestAnimationFrame(frame);
 }
@@ -382,6 +428,8 @@ function stop() {
   engine.panic();
   hq.length = 0;
   vq.length = 0;
+  gq.length = 0;
+  visuals.panic();
   clearFlashes();
   statusEl.textContent = 'stopped';
   statusEl.className = 'status';
@@ -389,6 +437,15 @@ function stop() {
 
 document.getElementById('run').onclick = run;
 document.getElementById('stop').onclick = stop;
+
+const vizBtn = document.getElementById('viz-toggle');
+const vizOpacity = document.getElementById('viz-opacity');
+vizBtn.onclick = () => setViz(!vizOn);
+vizOpacity.oninput = () => {
+  document.documentElement.style.setProperty('--viz-opacity', String(vizOpacity.value / 100));
+  if (Number(vizOpacity.value) > 0 && !vizOn) setViz(true);
+};
+document.documentElement.style.setProperty('--viz-opacity', String(vizOpacity.value / 100));
 
 const demoSel = document.getElementById('demo');
 for (const d of DEMOS) {
@@ -410,7 +467,7 @@ demoSel.onchange = () => {
   view.focus();
 };
 
-if (import.meta.env.DEV) window.__rattle = { view, engine, run, stop, worker };
+if (import.meta.env.DEV) window.__rattle = { view, engine, visuals, run, stop, worker, setViz };
 
 // CodeMirror's Mod- prefix already resolves to Ctrl off macOS; the labels did not.
 document.getElementById('kbd-run').textContent = isMac ? '\u2318\u23CE' : 'Ctrl+\u23CE';

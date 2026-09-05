@@ -1,7 +1,9 @@
 # rattle
 
 A Sonic Pi-style live-coding environment in the browser, driven by Python.
-Fully client-side: MicroPython in a Web Worker, Web Audio for sound, no backend.
+Sound and generative visuals from the same timestamped events, so they cannot
+drift apart. Fully client-side: MicroPython in a Web Worker, Web Audio and
+Canvas 2D, no backend.
 
 **[Try it →](https://forg-lab.github.io/rattle/)** ·
 **[Interactive reference →](https://forg-lab.github.io/rattle/docs.html)** ·
@@ -32,6 +34,7 @@ language.
 | `07-polyrhythm` | independent clocks drifting in and out |
 | `08-synths-and-effects` | every synth, envelopes, filter, reverb |
 | `09-python-loops` | `for`, `while` and comprehensions as composition |
+| `10-visuals` | generative animation behind the code, on the same clock |
 
 The full language reference is [DOCS.md](DOCS.md).
 

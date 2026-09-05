@@ -332,6 +332,138 @@ def a():
   },
 
   {
+    id: 'visuals',
+    title: 'Visuals',
+    blurb:
+      'A shape is a note. circle() is timestamped exactly like play(), and the ' +
+      'renderer grows and fades it across `life` beats — so one event becomes ' +
+      'sixty frames, and the shape lands on the beat rather than near it. ' +
+      'Coordinates run -1..1 from the centre with y up. The canvas appears ' +
+      'behind the page as soon as a box draws.',
+    entries: [
+      {
+        name: 'circle',
+        sig: 'circle(x=0, y=0, r=0.15, **opts)',
+        blurb:
+          'The envelope is the whole trick: one event per beat, sixty smooth ' +
+          'frames. `grow` scales the radius across its life, `life` is in beats.',
+        code: `use_bpm(100)
+
+@live_loop("v")
+def v():
+    trails(0.9)
+    circle(r=0.05, hue=0.5, life=2, grow=8, fill=0, width=0.01)
+    sleep(1)
+`,
+      },
+      {
+        name: 'shapes',
+        sig: 'rect · poly · line · arc',
+        blurb:
+          'Not `square` or `triangle` — those names belong to signals, so it is ' +
+          'rect and poly(n=…). Angles are in turns.',
+        code: `use_bpm(100)
+
+@live_loop("v")
+def v():
+    trails(0.85)
+    rect(x=-0.6, w=0.25, h=0.25, hue=0.05, life=1.5, spin=0.5)
+    poly(n=6, x=0, r=0.18, hue=0.35, life=1.5, fill=0, width=0.01)
+    arc(x=0.6, r=0.2, a0=0, a1=0.7, hue=0.65, life=1.5, spin=1)
+    sleep(1)
+`,
+      },
+      {
+        name: 'in time',
+        sig: 'a shape and a note are one event',
+        blurb:
+          'Both are drained on the same audible clock, so they cannot drift ' +
+          'apart. The choice below drives the pitch and the position together.',
+        code: `use_bpm(112)
+
+@live_loop("v")
+def v():
+    notes = scale("c3", "minor_pentatonic")
+    i = choose([0, 1, 2, 3, 4])
+    play(notes[i], release=0.3, amp=0.4)
+    circle(x=-0.8 + i * 0.4, y=0, r=0.06,
+           hue=0.1 + i * 0.12, life=1, grow=3)
+    sleep(0.5)
+`,
+      },
+      {
+        name: 'trails',
+        sig: 'trails(amount=0.9)',
+        blurb:
+          '0 clears every frame; toward 1 leaves long feedback smears. Capped ' +
+          'at 0.97 — below that an 8-bit fade never finishes and burns in.',
+        code: `use_bpm(120)
+
+@live_loop("v")
+def v():
+    trails(0.94)              # <- try 0, 0.6, 0.97
+    circle(x=sine(4, -0.8, 0.8), y=sine(3, -0.5, 0.5),
+           r=0.04, hue=saw(6, 0, 1), life=0.6)
+    sleep(0.0625)
+`,
+      },
+      {
+        name: 'glow',
+        sig: 'glow(on=1)',
+        blurb: 'Additive blending, so overlapping shapes brighten instead of covering.',
+        code: `use_bpm(100)
+
+@live_loop("v")
+def v():
+    trails(0.88)
+    glow(1)                   # <- try 0
+    for i in range(3):
+        circle(x=-0.35 + i * 0.35, r=0.22,
+               hue=0.55 + i * 0.08, life=1.5, alpha=0.5)
+    sleep(1.5)
+`,
+      },
+      {
+        name: 'mirror',
+        sig: 'mirror(n=1, flip=1)',
+        blurb:
+          'Kaleidoscope into n wedges; 1 is off. Costs one draw per shape per ' +
+          'wedge, so it is capped at 12. Changing it does not re-mirror the ' +
+          'trail already on screen — it shears, which looks good on the beat.',
+        code: `use_bpm(110)
+
+@live_loop("v")
+def v():
+    trails(0.9)
+    glow(1)
+    mirror(seq([3, 6, 12, 4], 4))     # <- a signal works here too
+    poly(n=3, x=rrand(0.2, 0.7), y=rrand(-0.3, 0.3),
+         r=0.05, hue=saw(8, 0, 1), life=2, spin=0.4, fill=0, width=0.008)
+    sleep(0.25)
+`,
+      },
+      {
+        name: 'bg',
+        sig: 'bg(hue=0.62, sat=0.35, val=0.06)',
+        blurb:
+          'Background colour. It lands on the beat you wrote it on rather than ' +
+          'easing across — blurring the downbeat is the one thing a visual ' +
+          'should not do.',
+        code: `use_bpm(96)
+
+@live_loop("v")
+def v():
+    bg(hue=saw(8, 0, 1), sat=0.7, val=0.12)
+    trails(0)
+    sample("bd")
+    circle(r=0.3, hue=0.1, val=1, life=1, grow=2, fill=0, width=0.02)
+    sleep(1)
+`,
+      },
+    ],
+  },
+
+  {
     id: 'random',
     title: 'Randomness',
     blurb:

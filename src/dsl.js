@@ -2,9 +2,17 @@
 // call sites get location tags) and by the autocomplete source.
 
 export const SOUND_CALLS = ['play', 'sample'];
-// Calls the transform tags with their source location. Sound calls need it for
-// the highlighter; slider() needs it because its position IS its identity.
-export const TAGGED_CALLS = ['play', 'sample', 'slider'];
+
+// Drawing calls. Shapes must not be named `square` or `tri` - those are already
+// signal functions - hence rect and poly(n=...).
+export const VIZ_SHAPES = ['circle', 'rect', 'poly', 'line', 'arc'];
+export const VIZ_STATE = ['bg', 'trails', 'glow', 'mirror'];
+export const VIZ_CALLS = [...VIZ_SHAPES, ...VIZ_STATE];
+
+// Calls the transform tags with their source location. Sound and drawing calls
+// need it for the highlighter; slider() needs it because its position IS its
+// identity.
+export const TAGGED_CALLS = [...SOUND_CALLS, 'slider', ...VIZ_CALLS];
 export const SLEEP_CALL = 'sleep';
 
 export const SYNTHS = [
@@ -81,11 +89,35 @@ export const FUNCS = {
   hold: { sig: 'hold(value)', doc: 'A constant as a signal, for where one is expected.' },
   lift: { sig: 'lift(fn, *sources)', doc: 'Combine signals or constants with an ordinary function: lift(lambda a, b: a + b, saw(4, 0, 20), 60).' },
   log: { sig: 'log(*args)', doc: 'Print to the log pane.' },
+
+  circle: { sig: 'circle(x=0, y=0, r=0.15, **opts)', doc: 'Spawn a circle. Like a note, it has a lifetime: it grows and fades over `life` beats, which is what turns one event into smooth motion.' },
+  rect: { sig: 'rect(x=0, y=0, w=0.3, h=0.3, **opts)', doc: 'Spawn a rectangle. Not `square` — that name is a signal.' },
+  poly: { sig: 'poly(n=3, x=0, y=0, r=0.15, **opts)', doc: 'Spawn an n-sided polygon. n=3 a triangle, n=6 a hexagon, large n reads as a circle.' },
+  line: { sig: 'line(x=0, y=0, x2=0, y2=0, **opts)', doc: 'Spawn a line between two points.' },
+  arc: { sig: 'arc(x=0, y=0, r=0.2, a0=0, a1=0.5, **opts)', doc: 'Spawn an arc. Angles are in turns, so a1=1 is a full circle.' },
+  bg: { sig: 'bg(hue=0.62, sat=0.35, val=0.06)', doc: 'Background colour. Lands on the beat you wrote it on rather than easing across it.' },
+  trails: { sig: 'trails(amount=0.9)', doc: 'Feedback. 0 clears every frame; toward 1 leaves long smears. Capped at 0.97, below which an 8-bit fade would never finish and burn in.' },
+  glow: { sig: 'glow(on=1)', doc: 'Additive blending, so overlapping shapes brighten instead of covering.' },
+  mirror: { sig: 'mirror(n=1, flip=1)', doc: 'Kaleidoscope into n wedges; 1 is off. Costs one draw per shape per wedge, so it is capped at 12.' },
 };
+
+// Options every drawing call accepts, on top of its own geometry.
+export const VIZ_ARGS = [
+  'life', 'hue', 'sat', 'val', 'alpha',
+  'grow', 'spin', 'vx', 'vy', 'rot',
+  'atk', 'curve', 'fill', 'width',
+];
 
 export const PARAMS = {
   play: ['amp', 'pan', 'attack', 'decay', 'sustain', 'release', 'cutoff', 'res', 'room', 'synth'],
   sample: ['amp', 'pan', 'rate', 'cutoff', 'room'],
   live_loop: ['sync', 'delay'],
   slider: ['lo', 'hi', 'step', 'label'],
+  circle: ['x', 'y', 'r', ...VIZ_ARGS],
+  rect: ['x', 'y', 'w', 'h', ...VIZ_ARGS],
+  poly: ['n', 'x', 'y', 'r', ...VIZ_ARGS],
+  line: ['x', 'y', 'x2', 'y2', ...VIZ_ARGS],
+  arc: ['x', 'y', 'r', 'a0', 'a1', ...VIZ_ARGS],
+  mirror: ['n', 'flip'],
+  bg: ['hue', 'sat', 'val'],
 };

@@ -264,10 +264,11 @@ def _drain():
             b = loc[1]
         parts = []
         for k in p:
-            v = p[k]
-            if isinstance(v, str):
-                v = v.replace(',', '').replace('=', '').replace('|', '')
-            parts.append(k + '=' + str(v))
+            # Sanitise the RENDERED value, not just str instances: a tuple or
+            # list would otherwise carry a comma through and shred the k=v
+            # parser on the other side.
+            v = str(p[k]).replace(',', '').replace('=', '').replace('|', '')
+            parts.append(k + '=' + v)
         out.append('e|%f|%s|%d|%d|%s' % (t, kind, a, b, ','.join(parts)))
     del _EV[:]
     for l in _LOG:
@@ -526,6 +527,95 @@ def play(n=60, _loc=None, **kw):
 def sample(name='bd', _loc=None, **kw):
     kw['name'] = _val(name)
     _emit('sample', kw, _loc)
+
+
+# ---------------------------------------------------------------- visuals
+#
+# A shape is a note. circle() emits a timestamped event exactly as play()
+# does, and the renderer spawns a shape with a lifetime envelope exactly as
+# the synth spawns a voice with an ADSR. One event becomes sixty frames, so
+# nothing here has to run per frame - which it could not, since this thread
+# is a quarter second ahead of what you are hearing.
+#
+# Coordinates are -1..1 from the centre with y UP, matching the range a
+# signal already produces: x=sine(4, -1, 1) sweeps the full width.
+
+
+def _spb():
+    return 60.0 / (_CUR.bpm if _CUR is not None else 60.0)
+
+
+def _shape(name, kw, loc):
+    kw['shape'] = name
+    # life is in BEATS, like sleep(). Converted here, where this thread's
+    # tempo is known, so the renderer never needs to hear about bpm.
+    kw['life'] = _val(kw['life']) * _spb() if 'life' in kw else _spb()
+    _emit('viz', kw, loc)
+
+
+def circle(x=0.0, y=0.0, r=0.15, _loc=None, **kw):
+    kw['x'] = x
+    kw['y'] = y
+    kw['r'] = r
+    _shape('circle', kw, _loc)
+
+
+def rect(x=0.0, y=0.0, w=0.3, h=0.3, _loc=None, **kw):
+    kw['x'] = x
+    kw['y'] = y
+    kw['w'] = w
+    kw['h'] = h
+    _shape('rect', kw, _loc)
+
+
+def poly(n=3, x=0.0, y=0.0, r=0.15, _loc=None, **kw):
+    kw['n'] = n
+    kw['x'] = x
+    kw['y'] = y
+    kw['r'] = r
+    _shape('poly', kw, _loc)
+
+
+def line(x=0.0, y=0.0, x2=0.0, y2=0.0, _loc=None, **kw):
+    kw['x'] = x
+    kw['y'] = y
+    kw['x2'] = x2
+    kw['y2'] = y2
+    _shape('line', kw, _loc)
+
+
+def arc(x=0.0, y=0.0, r=0.2, a0=0.0, a1=0.5, _loc=None, **kw):
+    kw['x'] = x
+    kw['y'] = y
+    kw['r'] = r
+    kw['a0'] = a0
+    kw['a1'] = a1
+    _shape('arc', kw, _loc)
+
+
+# Frame state. These persist until changed, and land on the beat they were
+# written on rather than smoothing across it - blurring the downbeat is the
+# one thing a visual should not do.
+
+def bg(hue=0.62, sat=0.35, val=0.06, _loc=None):
+    _emit('vizstate', {'hue': hue, 'sat': sat, 'val': val}, _loc)
+
+
+def trails(amount=0.9, _loc=None):
+    # capped below 1: an 8-bit fade toward an opaque colour never quite
+    # converges, so trails(1.0) would burn the canvas in permanently
+    a = _val(amount)
+    _emit('vizstate', {'trails': min(0.97, max(0.0, a))}, _loc)
+
+
+def glow(on=1, _loc=None):
+    _emit('vizstate', {'glow': 1 if _val(on) else 0}, _loc)
+
+
+def mirror(n=1, flip=1, _loc=None):
+    # cost per frame is shapes x segments, hence the ceiling
+    _emit('vizstate', {'mirror': min(12, max(1, int(_val(n)))),
+                       'flip': 1 if _val(flip) else 0}, _loc)
 
 
 # A slider's identity is where it is written. Values live here; the source keeps

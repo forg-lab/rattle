@@ -128,3 +128,66 @@ aside {
   .status { min-width: 0; }
 }
 
+
+/* ------------------------------------------------------------------ visuals
+   Everything is gated behind body.viz-on, so with visuals off the app renders
+   byte-identically to before. */
+
+#viz {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  display: none;
+  opacity: var(--viz-opacity, .6);
+  transition: opacity .25s ease;
+}
+
+body.viz-on #viz { display: block; }
+body.viz-on #app { position: relative; z-index: 1; }
+
+/* oneDark paints opaque backgrounds on the editor root, the gutters and the
+   active-line gutter; without these the canvas behind is simply invisible.
+   An #id .class selector outranks CodeMirror's generated single-class rules,
+   so load order never comes into it. */
+body.viz-on #editor .cm-editor,
+body.viz-on #editor .cm-scroller,
+body.viz-on #editor .cm-gutters,
+body.viz-on #editor .cm-activeLineGutter { background-color: transparent; }
+body.viz-on #editor .cm-activeLine { background-color: rgba(255, 255, 255, .05); }
+
+/* what actually keeps code readable over a moving image */
+body.viz-on #editor .cm-content,
+body.viz-on #editor .cm-gutters { text-shadow: 0 1px 3px rgba(0, 0, 0, .9); }
+
+body.viz-on #editor {
+  background: rgba(22, 24, 29, var(--scrim, .62));
+  backdrop-filter: blur(2px);
+}
+
+/* translucent chrome is what makes it read as a backdrop rather than a widget */
+body.viz-on header,
+body.viz-on aside {
+  background: color-mix(in srgb, var(--panel) 74%, transparent);
+  backdrop-filter: blur(12px) saturate(1.15);
+}
+
+/* Perform mode. opacity, never display:none - hiding #editor that way makes
+   CodeMirror lose its measured geometry and forces a reflow on the way back. */
+body.perform header,
+body.perform aside,
+body.perform #editor {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .45s ease;
+}
+body.perform #viz { opacity: 1; }
+
+#viz-opacity {
+  width: 74px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+body.viz-on #viz-toggle { color: var(--accent); border-color: #2f5d51; }

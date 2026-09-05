@@ -189,6 +189,62 @@ and none of them need names.
 
 ---
 
+## Visuals
+
+Press **visuals** in the header (or `Cmd/Ctrl+Shift+V`) and the canvas appears
+behind the code. `Cmd/Ctrl+\` fades the editor away for full screen.
+
+```python
+@live_loop("viz", sync="drums")
+def viz():
+    trails(0.88)                    # 0 clears each frame, →1 long feedback
+    glow(1)                         # additive blending
+    mirror(6)                       # kaleidoscope wedges, 1 = off
+    circle(x=sine(4, -1, 1), r=0.06,
+           hue=saw(8, 0, 1), life=2, grow=4)
+    sleep(0.25)
+```
+
+**A shape is a note.** `circle()` is timestamped exactly like `play()`, and the
+renderer grows and fades it across `life` beats — so one event per beat becomes
+sixty smooth frames. Nothing runs per frame in Python, and nothing could: that
+thread is a quarter of a second ahead of what you are hearing.
+
+That is also why a shape and a note written together cannot drift apart. Both
+are realised at the same audible moment, off the same timestamp, so the circle
+lands *on* the kick rather than near it.
+
+Shapes: `circle` `rect` `poly` `line` `arc`. Not `square` or `triangle` — those
+names belong to signals, hence `rect` and `poly(n=…)`.
+
+| option | | |
+|---|---|---|
+| `life` | 1 | how long it lives, **in beats** |
+| `hue` `sat` `val` `alpha` | | colour, hue `0..1` |
+| `grow` | 1 | radius multiplier across its life; `4` quadruples |
+| `spin` | 0 | rotations across its life |
+| `vx` `vy` | 0 | total drift across its life |
+| `fill` `width` | 1, 0.006 | filled, or stroked at this width |
+| `atk` `curve` | 0.03, 1.6 | envelope: attack fraction, decay shape |
+
+Frame state, which persists until changed: `trails(amount)` `glow(on)`
+`mirror(n, flip)` `bg(hue, sat, val)`.
+
+Coordinates run `-1..1` from the centre with **y up**, aspect-corrected on the
+shorter axis — the same range a signal already produces, so
+`x=sine(4, -1, 1)` sweeps the full width with nothing to rescale. The long axis
+extends past ±1, so `x=1.4` is a legal off-to-the-side position that stays put
+as the window resizes.
+
+Two limits are deliberate. `trails` caps at 0.97, because an 8-bit fade toward
+an opaque colour never quite arrives and 1.0 would burn the canvas in
+permanently. `mirror` caps at 12 and the live shape count at 360, because cost
+per frame is shapes × wedges — a runaway loop should degrade, not freeze.
+
+State changes land *on* the beat you wrote them on rather than easing across it.
+Blurring the downbeat is the one thing a visual should not do; if you want a
+slow drift, `bg(hue=sine(16, 0, 1))` is sampled on the grid like everything else.
+
 ## Randomness
 
 ```python

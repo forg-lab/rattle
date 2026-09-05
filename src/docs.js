@@ -10,6 +10,7 @@ import { indentUnit } from '@codemirror/language';
 import { indentMore, indentLess } from '@codemirror/commands';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { Engine } from './audio.js';
+import { Visuals } from './visuals.js';
 import { SECTIONS } from './docs-content.js';
 import {
   setSites, siteField, errField, siteMark, flashIn, clearFlashesIn, markErrorIn,
@@ -22,6 +23,8 @@ import './docs.css';
 // ------------------------------------------------------------ shared engine
 
 const engine = new Engine();
+const visuals = new Visuals(document.getElementById('viz'));
+let vizOn = false;
 const statusEl = document.getElementById('status');
 
 const isolated = typeof SharedArrayBuffer !== 'undefined' && self.crossOriginIsolated;
@@ -55,6 +58,7 @@ function makeBox(entry) {
     sliderSpecs: new Map(),
     hq: [],
     vq: [],
+    gq: [],
     sinceRun: null,
     sitesDirty: false,
   };
@@ -92,6 +96,7 @@ function resetBox(box) {
   box.sliderSpecs.clear();
   box.hq.length = 0;
   box.vq.length = 0;
+  box.gq.length = 0;
   box.view.dispatch({ effects: [setSites.of(Decoration.none), setSliders.of([])] });
   markErrorIn(box.view, -1);   // clears any mark from a previous run
 }
@@ -157,7 +162,13 @@ function stopAll(opts = {}) {
     active.hq.length = 0;
     active.vq.length = 0;
     clearFlashesIn(active.view, active.flashTimers);
+    active.gq.length = 0;
     active = null;
+  }
+  if (vizOn) {
+    vizOn = false;
+    document.body.classList.remove('viz-on');
+    visuals.panic();
   }
   if (!opts.keepStatus) {
     statusEl.textContent = ready ? 'ready' : 'booting…';
@@ -234,8 +245,12 @@ function consume(box, data) {
 
     const when = Math.max(engine.t0 + t, engine.ctx.currentTime + 0.005);
     try {
+      // Same explicit dispatch as the app: without it, a drawing call typed
+      // into a docs box would be handed to the sampler and click.
       if (kind === 'synth') engine.playSynth(when, p);
-      else engine.playSample(when, p);
+      else if (kind === 'sample') engine.playSample(when, p);
+      else if (kind === 'viz') box.gq.push({ at: when, draw: p });
+      else if (kind === 'vizstate') box.gq.push({ at: when, state: p });
     } catch (e) {
       say(box, 'audio: ' + e.message, 'err');
     }
@@ -254,6 +269,12 @@ function consume(box, data) {
   }
   box.hq.sort((x, y) => x.at - y.at);
   box.vq.sort((x, y) => x.at - y.at);
+  box.gq.sort((x, y) => x.at - y.at);
+  // reveal the canvas only once a box actually draws
+  if (box.gq.length && !vizOn) {
+    vizOn = true;
+    document.body.classList.add('viz-on');
+  }
   if (newSliders) pushSliders(box);
   if (box.sitesDirty && !sliderBusy) pushSites(box);
 }
@@ -316,6 +337,12 @@ function frame() {
       const v = active.vq.shift();
       applySliderValue(active.view.dom, v.key, v.value);
     }
+    while (active.gq.length && active.gq[0].at <= audible + 0.01) {
+      const g = active.gq.shift();
+      if (g.draw) visuals.spawn(g.at, g.draw);
+      else visuals.setState(g.state);
+    }
+    if (vizOn) visuals.tick(audible);
   }
   requestAnimationFrame(frame);
 }
@@ -446,4 +473,4 @@ for (const section of SECTIONS) {
   main.append(sec);
 }
 
-if (import.meta.env.DEV) window.__docs = { boxes, play, stopAll, engine, worker };
+if (import.meta.env.DEV) window.__docs = { boxes, play, stopAll, engine, worker, visuals };

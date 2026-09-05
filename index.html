@@ -9,12 +9,16 @@
     <script src="./coi-serviceworker.js"></script>
   </head>
   <body>
+    <canvas id="viz" aria-hidden="true"></canvas>
     <div id="app">
       <header>
         <span class="logo">rattle</span>
         <button id="run" class="primary">Run <kbd id="kbd-run"></kbd></button>
         <button id="stop">Stop <kbd id="kbd-stop"></kbd></button>
         <select id="demo" title="load a demo"></select>
+        <button id="viz-toggle" title="visuals (⌘⇧V)">visuals</button>
+        <input id="viz-opacity" type="range" min="0" max="100" value="60"
+               title="visual opacity" />
         <span class="spacer"></span>
         <span id="clock" class="meter">0.00s</span>
         <span id="ahead" class="meter" title="how far the least advanced thread is ahead of the audio clock; negative means underrun">headroom 0ms</span>

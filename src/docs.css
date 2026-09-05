@@ -211,3 +211,26 @@ button.play:hover { background: #2a5348; }
   #nav { display: none; }
   #layout { padding: 20px 16px 80px; }
 }
+
+/* Visuals. Hidden until a box actually draws something, so the reference looks
+   untouched for the 27 entries that make only sound. */
+#viz {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  display: none;
+  opacity: .55;
+}
+body.viz-on #viz { display: block; }
+body.viz-on header { background: color-mix(in srgb, var(--panel) 80%, transparent); }
+body.viz-on #layout { position: relative; z-index: 1; }
+body.viz-on .entry {
+  background: color-mix(in srgb, var(--panel) 82%, transparent);
+  backdrop-filter: blur(6px);
+}
+body.viz-on .entry-editor .cm-editor,
+body.viz-on .entry-editor .cm-scroller,
+body.viz-on .entry-editor .cm-gutters { background-color: transparent; }
