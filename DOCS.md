@@ -239,19 +239,21 @@ lands *on* the kick rather than near it.
 Shapes: `circle` `rect` `poly` `line` `arc`. Not `square` or `triangle` — those
 names belong to signals, hence `rect` and `poly(n=…)`.
 
-They take the same vocabulary wherever it can mean anything:
+Each has the geometry its own shape actually has, and every one of those has a
+matching velocity — how much it changes over the life:
 
-| | position | size | rotation | |
+| | position | size | rotation | own to it |
 |---|---|---|---|---|
-| `circle` | `x` `y` | `r` | — | |
-| `poly` | `x` `y` | `r` | `rot` `spin` | `n` sides |
-| `rect` | `x` `y` | `r`, or `w`/`h` | `rot` `spin` | |
-| `arc` | `x` `y` | `r` | `rot` `spin` | `a0` `a1` in turns; `fill=1` makes a wedge |
-| `line` | `x` `y` | `width` | — | `x2` `y2` for the far end |
+| `circle` | `x` `y` | `r` → `vr` | — | |
+| `poly` | `x` `y` | `r` → `vr` | `rot` `spin` | `n` sides |
+| `rect` | `x` `y` | `w` `h` → `vw` `vh` | `rot` `spin` | |
+| `arc` | `x` `y` | `r` → `vr` | `rot` `spin` | `a0` `a1` in turns; `fill=1` makes a wedge |
+| `line` | `x` `y` | `width` | — | `x2` `y2` → `vx2` `vy2` |
 
-`vx`, `vy` and `vr` move each of those over the shape's life, so one event
-keeps changing after the beat that made it. A line translates whole — both ends
-drift together.
+`vx` and `vy` move the *whole* shape, whatever it is — a line translates with
+both ends together. Everything else changes that shape's own geometry, so a
+rectangle grows by `vw`/`vh` and a circle by `vr`. There is no `r` on a
+rectangle and no `vr` acting on one; a rectangle does not have a radius.
 
 | option | | |
 |---|---|---|

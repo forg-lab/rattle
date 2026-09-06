@@ -91,9 +91,9 @@ export const FUNCS = {
   log: { sig: 'log(*args)', doc: 'Print to the log pane.' },
 
   circle: { sig: 'circle(x=0, y=0, r=0.15, **opts)', doc: 'Spawn a circle. Like a note, it has a lifetime: it grows and fades over `life` beats, which is what turns one event into smooth motion. x, y and r are only where it STARTS. vx, vy and vr are how far each travels over its life — vr grows or shrinks it, and a negative vr shrinks through zero to a point. spin turns it.' },
-  rect: { sig: 'rect(x=0, y=0, r=None, w=0.3, h=0.3, **opts)', doc: 'Spawn a rectangle. Not `square` — that name is a signal. r sizes it like every other shape (a square 2r across); w and h are there for when it is not square.' },
+  rect: { sig: 'rect(x=0, y=0, w=0.3, h=0.3, **opts)', doc: 'Spawn a rectangle. Not `square` — that name is a signal. It grows with vw and vh, as a circle grows with vr.' },
   poly: { sig: 'poly(n=3, x=0, y=0, r=0.15, **opts)', doc: 'Spawn an n-sided polygon. n=3 a triangle, n=6 a hexagon, large n reads as a circle.' },
-  line: { sig: 'line(x=0, y=0, x2=0, y2=0, **opts)', doc: 'Spawn a line between two points. vx and vy drift both ends, so it travels rather than stretches.' },
+  line: { sig: 'line(x=0, y=0, x2=0, y2=0, **opts)', doc: 'Spawn a line between two points. vx and vy drift both ends so it travels rather than stretches; vx2 and vy2 move the far end on its own.' },
   arc: { sig: 'arc(x=0, y=0, r=0.2, a0=0, a1=0.5, **opts)', doc: 'Spawn an arc. Angles are in turns, so a1=1 is a full circle. fill=1 closes it into a pie wedge.' },
   bg: { sig: 'bg(hue=0.62, sat=0.35, val=0.06)', doc: 'Background colour. Lands on the beat you wrote it on rather than easing across it.' },
   trails: { sig: 'trails(amount=0.9)', doc: 'Feedback. 0 clears every frame; toward 1 leaves long smears. Capped at 0.97, below which an 8-bit fade would never finish and burn in.' },
@@ -101,10 +101,11 @@ export const FUNCS = {
   mirror: { sig: 'mirror(n=1, flip=1)', doc: 'Kaleidoscope into n wedges; 1 is off. Costs one draw per shape per wedge, so it is capped at 12.' },
 };
 
-// Options every drawing call accepts, on top of its own geometry.
+// Options every drawing call accepts. vx/vy move the whole shape; each shape's
+// own geometry gets its own v- parameters, listed per shape in PARAMS below.
 export const VIZ_ARGS = [
   'life', 'hue', 'sat', 'val', 'alpha',
-  'vx', 'vy', 'vr', 'spin', 'rot',
+  'vx', 'vy', 'spin', 'rot',
   'atk', 'curve', 'fill', 'width',
 ];
 
@@ -113,11 +114,11 @@ export const PARAMS = {
   sample: ['amp', 'pan', 'rate', 'cutoff', 'room'],
   live_loop: ['sync', 'delay'],
   slider: ['lo', 'hi', 'step', 'label'],
-  circle: ['x', 'y', 'r', ...VIZ_ARGS],
-  rect: ['x', 'y', 'r', 'w', 'h', ...VIZ_ARGS],
-  poly: ['n', 'x', 'y', 'r', ...VIZ_ARGS],
-  line: ['x', 'y', 'x2', 'y2', ...VIZ_ARGS],
-  arc: ['x', 'y', 'r', 'a0', 'a1', ...VIZ_ARGS],
+  circle: ['x', 'y', 'r', 'vr', ...VIZ_ARGS],
+  rect: ['x', 'y', 'w', 'h', 'vw', 'vh', ...VIZ_ARGS],
+  poly: ['n', 'x', 'y', 'r', 'vr', ...VIZ_ARGS],
+  line: ['x', 'y', 'x2', 'y2', 'vx2', 'vy2', ...VIZ_ARGS],
+  arc: ['x', 'y', 'r', 'a0', 'a1', 'vr', ...VIZ_ARGS],
   mirror: ['n', 'flip'],
   bg: ['hue', 'sat', 'val'],
 };

@@ -76,7 +76,9 @@ export class Visuals {
       n: Math.max(3, Math.round(num(p.n, 3))),
       a0: num(p.a0, 0), a1: num(p.a1, 0.5),
       rot: num(p.rot, 0) * TAU,
-      vr: num(p.vr, 0), spin: num(p.spin, 0),
+      vr: num(p.vr, 0), vw: num(p.vw, 0), vh: num(p.vh, 0),
+      vx2: num(p.vx2, 0), vy2: num(p.vy2, 0),
+      spin: num(p.spin, 0),
       vx: num(p.vx, 0), vy: num(p.vy, 0),
       atk: Math.min(0.9, Math.max(0.001, num(p.atk, 0.03))),
       curve: Math.max(0.1, num(p.curve, 1.6)),
@@ -198,8 +200,7 @@ export class Visuals {
       // for position. A negative vr shrinks straight through zero - the canvas
       // API throws IndexSizeError on a negative radius, so nothing is as small
       // as this gets. Also catches a NaN out of signal arithmetic.
-      const dsz = sh.vr * u;
-      let rr = sh.r + dsz;
+      let rr = sh.r + sh.vr * u;
       if (!(rr > 0)) rr = 0;
       const px = sh.x + sh.vx * u;
       const py = sh.y + sh.vy * u;
@@ -215,7 +216,7 @@ export class Visuals {
         ctx.save();
         if (seg > 1) ctx.rotate((k * TAU) / seg);
         if (st.flip && (k & 1)) ctx.scale(-1, 1);
-        this.#draw(sh, px, py, rr, rot, dsz, sh.vx * u, sh.vy * u);
+        this.#draw(sh, px, py, rr, rot, u, sh.vx * u, sh.vy * u);
         ctx.restore();
       }
     }
@@ -225,15 +226,15 @@ export class Visuals {
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  #draw(sh, px, py, rr, rot, dsz, dx, dy) {
+  #draw(sh, px, py, rr, rot, u, dx, dy) {
     const ctx = this.ctx;
     ctx.beginPath();
     switch (sh.shape) {
       case 'rect': {
         ctx.translate(px, py);
         ctx.rotate(rot);
-        const w = Math.max(0, sh.w + dsz);
-        const h = Math.max(0, sh.h + dsz);
+        const w = Math.max(0, sh.w + sh.vw * u);
+        const h = Math.max(0, sh.h + sh.vh * u);
         ctx.rect(-w / 2, -h / 2, w, h);
         break;
       }
@@ -252,7 +253,8 @@ export class Visuals {
       case 'line':
         // BOTH ends drift: vx/vy move the whole shape, they do not stretch it
         ctx.moveTo(px, py);
-        ctx.lineTo(sh.x2 + dx, sh.y2 + dy);
+        // dx/dy translate the whole line; vx2/vy2 then move the far end alone
+        ctx.lineTo(sh.x2 + dx + sh.vx2 * u, sh.y2 + dy + sh.vy2 * u);
         ctx.stroke();
         return;                              // a line has nothing to fill
       case 'arc': {

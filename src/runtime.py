@@ -619,19 +619,14 @@ def circle(x=0.0, y=0.0, r=0.15, _loc=None, **kw):
     _shape('circle', kw, _loc)
 
 
-def rect(x=0.0, y=0.0, w=None, h=None, r=None, _loc=None, **kw):
-    # r sizes a rect the same way it sizes everything else - a square 2r across
-    # - so r and vr mean one thing across the whole vocabulary. w and h are
-    # still there when a rectangle really is not square.
-    if r is not None:
-        if w is None:
-            w = _val(r) * 2
-        if h is None:
-            h = _val(r) * 2
+def rect(x=0.0, y=0.0, w=0.3, h=0.3, _loc=None, **kw):
+    # A rectangle has width and height, not a radius. It grows with vw and vh,
+    # the same way a circle grows with vr: every geometry parameter has a
+    # matching v.
     kw['x'] = x
     kw['y'] = y
-    kw['w'] = 0.3 if w is None else w
-    kw['h'] = 0.3 if h is None else h
+    kw['w'] = w
+    kw['h'] = h
     _shape('rect', kw, _loc)
 
 
