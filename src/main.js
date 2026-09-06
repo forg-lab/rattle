@@ -494,6 +494,28 @@ logBtn.onclick = () => setLogMin(!logIsMin());
 
 // ---------------------------------------------------------------- settings
 
+const navToggle = document.getElementById('nav-toggle');
+const tools = document.getElementById('tools');
+
+const navIsOpen = () => document.body.classList.contains('nav-open');
+
+function openNav(open) {
+  document.body.classList.toggle('nav-open', open);
+  navToggle.setAttribute('aria-expanded', String(open));
+}
+
+navToggle.onclick = (e) => {
+  e.stopPropagation();
+  openNav(!navIsOpen());
+};
+
+document.addEventListener('click', (e) => {
+  if (navIsOpen() && !tools.contains(e.target)) openNav(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && navIsOpen()) openNav(false);
+});
+
 const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings');
 const prefLineNumbers = document.getElementById('pref-linenumbers');
@@ -554,6 +576,7 @@ demoSel.onchange = () => {
   // is the right call while performing, but picking a demo means replacing the
   // piece, not layering it on the last one.
   stop();
+  openNav(false);
   view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: d.code } });
   logEl.innerHTML = '';
   run();

@@ -12,9 +12,11 @@
     <canvas id="viz" aria-hidden="true"></canvas>
     <div id="app">
       <header>
+        <button id="nav-toggle" aria-label="menu" aria-expanded="false">&#9776;</button>
         <span class="logo">rattle</span>
         <button id="run" class="primary">Run <kbd id="kbd-run"></kbd></button>
         <button id="stop">Stop <kbd id="kbd-stop"></kbd></button>
+        <div id="tools">
         <select id="demo" title="load a demo"></select>
         <button id="viz-toggle" title="visuals (⌘⇧V)">visuals</button>
         <label id="code-fade" title="fade the code to see more of the visuals (⌘\ hides it entirely)">
@@ -33,7 +35,8 @@
             <label><input type="checkbox" id="pref-logmin" /> minimise the log</label>
           </div>
         </div>
-        <a class="docs" href="./docs.html">docs</a>
+        <a class="docs" href="./docs.html">docs<span class="btn-label"> &rarr;</span></a>
+        </div>
       </header>
       <main>
         <div id="editor"></div>

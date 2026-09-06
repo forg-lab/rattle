@@ -290,3 +290,95 @@ body.log-min aside.has-unread .pane-name { color: var(--accent); }
 /* The gutter carries the line numbers and the fold arrows; hiding it whole is
    what actually reclaims the width, which is the point of turning it off. */
 body.no-gutter #editor .cm-gutters { display: none; }
+
+/* ------------------------------------------------------- header / drawer */
+
+/* Everything but Run, Stop and the logo lives in #tools, so the same controls
+   serve both layouts - no duplicated DOM and no state to keep in sync. */
+#tools {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  min-width: 0;
+}
+
+#nav-toggle {
+  display: none;
+  font-size: 15px;
+  line-height: 1;
+  padding: 5px 9px;
+}
+
+/* Between the drawer and a comfortable desktop the bar is tight, and it is
+   tightest with the code slider showing. Drop the diagnostics first - they are
+   the least load-bearing thing up there - rather than letting it wrap. */
+@media (min-width: 901px) and (max-width: 1120px) {
+  #clock, #ahead { display: none; }
+}
+
+@media (max-width: 900px) {
+  header {
+    flex-wrap: nowrap;
+    min-height: 48px;
+    box-sizing: border-box;
+  }
+  #nav-toggle { display: inline-flex; }
+
+  /* Below the header rather than over it, so the hamburger stays reachable
+     to close what it opened. */
+  #tools {
+    position: fixed;
+    top: 48px;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
+    width: 268px;
+    max-width: 84vw;
+    flex: none;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding: 14px;
+    background: var(--panel);
+    border-right: 1px solid var(--line);
+    box-shadow: 0 0 40px rgba(0, 0, 0, .5);
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform .22s ease;
+  }
+  body.nav-open #tools { transform: translateX(0); }
+
+  body.nav-open::after {
+    content: '';
+    position: fixed;
+    inset: 48px 0 0 0;
+    z-index: 39;
+    background: rgba(0, 0, 0, .5);
+  }
+
+  /* the spacer only makes sense pushing things apart on one row */
+  #tools .spacer { display: none; }
+  #tools .meter,
+  #tools .status { text-align: left; min-width: 0; }
+  #tools select,
+  #tools > button,
+  #tools .docs { width: 100%; }
+  #tools .docs { padding: 6px 0; border-bottom: none; }
+  #tools #code-fade { justify-content: space-between; }
+  #tools .menu { width: 100%; }
+  #tools #settings-btn { width: 100%; text-align: left; }
+  .popover { right: auto; left: 0; }
+}
+
+/* an icon alone reads as a mystery once it is a full-width row */
+.btn-label { display: none; }
+@media (max-width: 900px) {
+  .btn-label { display: inline; margin-left: 8px; }
+  #tools #settings-btn { display: flex; align-items: center; }
+}
+
+/* on a phone the wordmark is the first thing worth losing */
+@media (max-width: 430px) {
+  .logo { display: none; }
+}
