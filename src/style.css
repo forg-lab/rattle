@@ -165,7 +165,11 @@ body.viz-on #editor .cm-gutters { text-shadow: 0 1px 3px rgba(0, 0, 0, .9); }
 
 body.viz-on #editor {
   background: rgba(22, 24, 29, var(--scrim, .62));
-  backdrop-filter: blur(2px);
+  /* No backdrop-filter here, deliberately. It blurred the visuals across the
+     88% of the viewport this element covers, and opacity does not undo it:
+     fading the code cross-fades a blurred copy OVER the still-sharp original,
+     so the picture stays hazy until the slider reaches zero. The scrim above
+     and the text-shadow below carry legibility on their own. */
   /* fades the scrim along with the text, so the code recedes as one layer */
   opacity: var(--code-opacity, 1);
   transition: opacity .12s linear;
