@@ -370,8 +370,11 @@ Completions are context-aware: inside `sample("` you get drum names, inside
 `scale(x, "` scale names, after `play(` its keyword arguments — each with its
 signature and description.
 
-The gear in the header holds display preferences — line numbers, and whether
-the log starts minimised. They persist in `localStorage` rather than a cookie,
+Hovering a function shows its signature, what it does, and the options it
+takes — the same text the completion popup uses, so there is one copy of it.
+
+The gear in the header holds display preferences — hover docs, line numbers,
+and whether the log starts minimised. They persist in `localStorage` rather than a cookie,
 since nothing here needs to reach a server, and every access is guarded so a
 private-browsing window degrades to defaults instead of failing.
 

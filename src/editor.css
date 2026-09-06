@@ -115,3 +115,23 @@
   min-width: 30px;
   text-align: right;
 }
+
+/* hover documentation */
+.cm-hoverdoc {
+  max-width: 380px;
+  padding: 9px 11px;
+  font: 13px/1.5 ui-sans-serif, -apple-system, "Segoe UI", system-ui, sans-serif;
+}
+.cm-hoverdoc .hd-sig {
+  display: block;
+  font: 12px var(--mono);
+  color: var(--accent);
+  margin-bottom: 5px;
+}
+.cm-hoverdoc .hd-doc { margin: 0; color: var(--fg); }
+.cm-hoverdoc .hd-args {
+  margin: 7px 0 0;
+  font: 11px var(--mono);
+  color: var(--dim);
+  line-height: 1.7;
+}

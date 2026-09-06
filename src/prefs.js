@@ -9,6 +9,7 @@ const KEY = 'rattle:prefs';
 const DEFAULTS = {
   lineNumbers: true,
   logMin: false,
+  hovers: true,
 };
 
 let cache = null;

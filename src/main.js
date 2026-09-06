@@ -1,5 +1,5 @@
 import { EditorView, basicSetup } from 'codemirror';
-import { EditorState, Prec, ChangeSet } from '@codemirror/state';
+import { EditorState, Prec, ChangeSet, Compartment } from '@codemirror/state';
 import { Decoration, keymap } from '@codemirror/view';
 import { python } from '@codemirror/lang-python';
 import { indentUnit } from '@codemirror/language';
@@ -16,6 +16,7 @@ import {
 } from './marks.js';
 import { Engine } from './audio.js';
 import { Visuals } from './visuals.js';
+import { dslHover } from './hover.js';
 import { getPref, setPref } from './prefs.js';
 import './style.css';
 
@@ -44,6 +45,11 @@ let sinceRun = null;
 
 // ------------------------------------------------------------------ editor
 
+// Reconfigurable at runtime, so flipping the hover preference is a one-line
+// dispatch rather than a rebuild of the editor. Must be declared before the
+// EditorView that references it.
+const hoverConf = new Compartment();
+
 const view = new EditorView({
   parent: document.getElementById('editor'),
   state: EditorState.create({
@@ -56,6 +62,7 @@ const view = new EditorView({
       siteField,
       errField,
       sliderField,
+      hoverConf.of(getPref('hovers') ? dslHover : []),
       // defaultKeymap:false because it binds Enter to acceptCompletion, which
       // steals every newline you type while the popup is open. Tab accepts
       // instead; Enter always means Enter.
@@ -176,6 +183,7 @@ const sliderSpecs = new Map();   // key ("a:b" in run-time offsets) -> spec
 
 // Set while a slider is being dragged, so its widget is not rebuilt under it.
 let sliderBusy = false;
+
 
 function setSliderBusy(busy) {
   sliderBusy = busy;
@@ -536,12 +544,19 @@ document.addEventListener('keydown', (e) => {
 const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings');
 const prefLineNumbers = document.getElementById('pref-linenumbers');
+const prefHovers = document.getElementById('pref-hovers');
 const prefLogMin = document.getElementById('pref-logmin');
 
 function setLineNumbers(on) {
   document.body.classList.toggle('no-gutter', !on);
   prefLineNumbers.checked = on;
   setPref('lineNumbers', on);
+}
+
+function setHovers(on) {
+  view.dispatch({ effects: hoverConf.reconfigure(on ? dslHover : []) });
+  prefHovers.checked = on;
+  setPref('hovers', on);
 }
 
 function openSettings(open) {
@@ -554,6 +569,7 @@ settingsBtn.onclick = (e) => {
   openSettings(settingsPanel.hidden);
 };
 prefLineNumbers.onchange = () => setLineNumbers(prefLineNumbers.checked);
+prefHovers.onchange = () => setHovers(prefHovers.checked);
 prefLogMin.onchange = () => setLogMin(prefLogMin.checked);
 
 // click away or Escape to dismiss
@@ -565,6 +581,7 @@ document.addEventListener('keydown', (e) => {
 });
 
 // apply what was saved last time
+setHovers(getPref('hovers'));
 setLineNumbers(getPref('lineNumbers'));
 setLogMin(getPref('logMin'));
 
