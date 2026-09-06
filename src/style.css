@@ -244,3 +244,49 @@ body.log-min #log-toggle { transform: rotate(180deg); }
 
 /* the unread dot: something arrived while the pane was shut */
 body.log-min aside.has-unread .pane-name { color: var(--accent); }
+
+/* --------------------------------------------------------------- settings */
+
+.menu { position: relative; }
+
+#settings-btn {
+  font-size: 14px;
+  line-height: 1;
+  padding: 5px 9px;
+  color: var(--dim);
+}
+#settings-btn:hover,
+#settings-btn[aria-expanded="true"] { color: var(--accent); }
+
+.popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 30;
+  min-width: 176px;
+  padding: 8px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .45);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.popover label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 7px;
+  border-radius: 5px;
+  font-size: 13px;
+  color: var(--fg);
+  cursor: pointer;
+}
+.popover label:hover { background: #262b34; }
+.popover input[type="checkbox"] { accent-color: var(--accent); cursor: pointer; }
+
+/* The gutter carries the line numbers and the fold arrows; hiding it whole is
+   what actually reclaims the width, which is the point of turning it off. */
+body.no-gutter #editor .cm-gutters { display: none; }

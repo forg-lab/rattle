@@ -16,6 +16,7 @@ import {
 } from './marks.js';
 import { Engine } from './audio.js';
 import { Visuals } from './visuals.js';
+import { getPref, setPref } from './prefs.js';
 import './style.css';
 
 const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || '');
@@ -484,12 +485,49 @@ function setLogMin(min) {
   document.body.classList.toggle('log-min', min);
   logBtn.title = (min ? 'show' : 'minimise') + ' the log (\u2318\u21e7L)';
   if (!min) aside.classList.remove('has-unread');
-  try { localStorage.setItem('rattle:log-min', min ? '1' : '0'); } catch (_) { /* private mode */ }
+  prefLogMin.checked = min;
+  setPref('logMin', min);
 }
 
 const logIsMin = () => document.body.classList.contains('log-min');
 logBtn.onclick = () => setLogMin(!logIsMin());
-try { if (localStorage.getItem('rattle:log-min') === '1') setLogMin(true); } catch (_) { /* private mode */ }
+
+// ---------------------------------------------------------------- settings
+
+const settingsBtn = document.getElementById('settings-btn');
+const settingsPanel = document.getElementById('settings');
+const prefLineNumbers = document.getElementById('pref-linenumbers');
+const prefLogMin = document.getElementById('pref-logmin');
+
+function setLineNumbers(on) {
+  document.body.classList.toggle('no-gutter', !on);
+  prefLineNumbers.checked = on;
+  setPref('lineNumbers', on);
+}
+
+function openSettings(open) {
+  settingsPanel.hidden = !open;
+  settingsBtn.setAttribute('aria-expanded', String(open));
+}
+
+settingsBtn.onclick = (e) => {
+  e.stopPropagation();
+  openSettings(settingsPanel.hidden);
+};
+prefLineNumbers.onchange = () => setLineNumbers(prefLineNumbers.checked);
+prefLogMin.onchange = () => setLogMin(prefLogMin.checked);
+
+// click away or Escape to dismiss
+document.addEventListener('click', (e) => {
+  if (!settingsPanel.hidden && !settingsPanel.contains(e.target)) openSettings(false);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && !settingsPanel.hidden) openSettings(false);
+});
+
+// apply what was saved last time
+setLineNumbers(getPref('lineNumbers'));
+setLogMin(getPref('logMin'));
 
 const vizBtn = document.getElementById('viz-toggle');
 const codeOpacity = document.getElementById('code-opacity');

@@ -25,6 +25,14 @@
         <span id="clock" class="meter">0.00s</span>
         <span id="ahead" class="meter" title="how far the least advanced thread is ahead of the audio clock; negative means underrun">headroom 0ms</span>
         <span id="status" class="status">booting…</span>
+        <div class="menu">
+          <button id="settings-btn" title="settings" aria-haspopup="true"
+                  aria-expanded="false">&#9881;</button>
+          <div id="settings" class="popover" hidden>
+            <label><input type="checkbox" id="pref-linenumbers" /> line numbers</label>
+            <label><input type="checkbox" id="pref-logmin" /> minimise the log</label>
+          </div>
+        </div>
         <a class="docs" href="./docs.html">docs</a>
       </header>
       <main>

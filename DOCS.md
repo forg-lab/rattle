@@ -366,6 +366,14 @@ Completions are context-aware: inside `sample("` you get drum names, inside
 `scale(x, "` scale names, after `play(` its keyword arguments — each with its
 signature and description.
 
+The gear in the header holds display preferences — line numbers, and whether
+the log starts minimised. They persist in `localStorage` rather than a cookie,
+since nothing here needs to reach a server, and every access is guarded so a
+private-browsing window degrades to defaults instead of failing.
+
+With line numbers off, an error still marks its line in red; only the "— line
+12" in the log message gets harder to act on.
+
 The amber flash marks what is **sounding right now**, not what Python is
 computing, which by then is a quarter of a second ahead.
 
