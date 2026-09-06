@@ -155,12 +155,29 @@ play(60, pan=lambda t: (t % 2) - 1)           # any callable taking the beat
 | `hold(value)` | a constant, where a signal is expected |
 | `lift(fn, *sources)` | combine signals with an ordinary function |
 
-Signals hold no state, and that is the whole point: the same beat always yields
-the same value, so a sweep keeps its phase when you edit the loop around it and
-cannot drift. A counter can promise neither.
+**Signals do arithmetic.** A signal is a value that happens to vary, so you
+place it and scale it the way you would a number:
 
 ```python
-lift(lambda a, b: a + b, saw(4, 0, 12), 60)   # a rising line from note 60
+circle(y=sine(4, 0, 1) + 0.5)          # a sweep that sits above the centre
+play(60 + saw(8, 0, 12))               # a rising line from note 60
+play(60, amp=1 - sine(4, 0, 0.5))      # inverted
+circle(r=abs(sine(2, -0.2, 0.2)))      # folded
+circle(x=sine(4, -1, 1) * saw(2, 0, 1))   # one shaping the other
+```
+
+`+ - * / % **`, unary `-`, and `abs()`, in either order — a plain number can
+come first. Every result is another signal, so they nest: `(sine(4,0,1) + 1) * 2`.
+
+Signals hold no state, and that is the whole point: the same beat always yields
+the same value, so a sweep keeps its phase when you edit the loop around it and
+cannot drift. Composing them preserves that — an expression is still a pure
+function of the beat. A counter can promise neither.
+
+`lift(fn, *sources)` remains for anything the operators do not cover:
+
+```python
+lift(lambda a, b: max(a, b), sine(4, 0, 1), saw(3, 0, 1))
 ```
 
 ---

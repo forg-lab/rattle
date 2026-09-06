@@ -277,14 +277,34 @@ def a():
 `,
       },
       {
-        name: 'lift',
-        sig: 'lift(fn, *sources)',
-        blurb: 'Combine signals and constants with an ordinary function.',
+        name: 'arithmetic',
+        sig: 'signal + - * / % ** , abs(), unary -',
+        blurb:
+          'A signal is a value that happens to vary, so you place and scale it ' +
+          'like a number. Either order — a plain number can come first — and ' +
+          'every result is another signal, so they nest.',
         code: `@live_loop("a")
 def a():
     use_synth("pluck")
-    # a line that climbs an octave over 8 beats, starting from note 60
-    play(lift(lambda a, b: a + b, saw(8, 0, 12), 60), release=0.3, amp=0.4)
+    # a line climbing an octave over 8 beats, from note 60
+    play(60 + saw(8, 0, 12),
+         amp=1 - sine(4, 0, 0.6),      # inverted
+         release=0.3)
+    sleep(0.25)
+`,
+      },
+      {
+        name: 'lift',
+        sig: 'lift(fn, *sources)',
+        blurb:
+          'For anything the operators do not cover. Plain arithmetic no longer ' +
+          'needs it.',
+        code: `@live_loop("a")
+def a():
+    use_synth("pluck")
+    # whichever of the two sweeps is higher, right now
+    play(60 + 12 * lift(lambda a, b: max(a, b), sine(4, 0, 1), saw(3, 0, 1)),
+         release=0.3, amp=0.4)
     sleep(0.25)
 `,
       },

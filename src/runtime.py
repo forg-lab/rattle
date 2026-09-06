@@ -434,57 +434,102 @@ def _val(x):
     return x(_beats()) if callable(x) else x
 
 
+def _at(x, t):
+    return x(t) if callable(x) else x
+
+
+class Signal:
+    """A function of beat-time that composes like a number.
+
+    sine(4, 0, 1) + 0.5 has to work: a signal is a value that happens to vary,
+    and arithmetic is how you say where it sits and how far it reaches. Every
+    operator returns another Signal, so they chain, and the reflected forms
+    mean a plain number can come first - 60 + saw(8, 0, 12) is a rising line
+    from note 60.
+    """
+
+    def __init__(self, fn):
+        self.fn = fn
+
+    def __call__(self, t):
+        return self.fn(t)
+
+    def __add__(self, o):
+        return Signal(lambda t: self.fn(t) + _at(o, t))
+
+    def __radd__(self, o):
+        return Signal(lambda t: _at(o, t) + self.fn(t))
+
+    def __sub__(self, o):
+        return Signal(lambda t: self.fn(t) - _at(o, t))
+
+    def __rsub__(self, o):
+        return Signal(lambda t: _at(o, t) - self.fn(t))
+
+    def __mul__(self, o):
+        return Signal(lambda t: self.fn(t) * _at(o, t))
+
+    def __rmul__(self, o):
+        return Signal(lambda t: _at(o, t) * self.fn(t))
+
+    def __truediv__(self, o):
+        return Signal(lambda t: self.fn(t) / _at(o, t))
+
+    def __rtruediv__(self, o):
+        return Signal(lambda t: _at(o, t) / self.fn(t))
+
+    def __mod__(self, o):
+        return Signal(lambda t: self.fn(t) % _at(o, t))
+
+    def __pow__(self, o):
+        return Signal(lambda t: self.fn(t) ** _at(o, t))
+
+    def __neg__(self):
+        return Signal(lambda t: -self.fn(t))
+
+    def __abs__(self):
+        return Signal(lambda t: abs(self.fn(t)))
+
+
 def saw(period=4.0, lo=0.0, hi=1.0):
-    def f(t):
-        return lo + (hi - lo) * ((t % period) / period)
-    return f
+    return Signal(lambda t: lo + (hi - lo) * ((t % period) / period))
 
 
 def isaw(period=4.0, lo=0.0, hi=1.0):
-    def f(t):
-        return hi - (hi - lo) * ((t % period) / period)
-    return f
+    return Signal(lambda t: hi - (hi - lo) * ((t % period) / period))
 
 
 def sine(period=4.0, lo=0.0, hi=1.0, phase=0.0):
     def f(t):
         a = (t / period + phase) * 2.0 * math.pi
         return lo + (hi - lo) * (0.5 + 0.5 * math.sin(a))
-    return f
+    return Signal(f)
 
 
 def tri(period=4.0, lo=0.0, hi=1.0):
     def f(t):
         ph = (t % period) / period
         return lo + (hi - lo) * (2.0 * ph if ph < 0.5 else 2.0 * (1.0 - ph))
-    return f
+    return Signal(f)
 
 
 def square(period=4.0, lo=0.0, hi=1.0, width=0.5):
-    def f(t):
-        return hi if ((t % period) / period) < width else lo
-    return f
+    return Signal(lambda t: hi if ((t % period) / period) < width else lo)
 
 
 def seq(values, step=1.0):
     xs = values.xs if isinstance(values, Ring) else list(values)
-
-    def f(t):
-        return xs[int(t / step) % len(xs)]
-    return f
+    return Signal(lambda t: xs[int(t / step) % len(xs)])
 
 
 def hold(value):
-    def f(t):
-        return value
-    return f
+    return Signal(lambda t: value)
 
 
 def lift(fn, *sources):
-    # combine signals or constants with an ordinary function
-    def f(t):
-        return fn(*[s(t) if callable(s) else s for s in sources])
-    return f
+    # combine signals or constants with an ordinary function. Arithmetic no
+    # longer needs this - it is for anything the operators do not cover.
+    return Signal(lambda t: fn(*[_at(s, t) for s in sources]))
 
 
 def use_synth(name):

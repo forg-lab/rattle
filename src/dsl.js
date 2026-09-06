@@ -87,7 +87,7 @@ export const FUNCS = {
   square: { sig: 'square(period=4, lo=0, hi=1, width=0.5)', doc: 'Alternates hi then lo across `period` beats.' },
   seq: { sig: 'seq(values, step=1)', doc: 'Step through a list over time, one entry per `step` beats. Wraps.' },
   hold: { sig: 'hold(value)', doc: 'A constant as a signal, for where one is expected.' },
-  lift: { sig: 'lift(fn, *sources)', doc: 'Combine signals or constants with an ordinary function: lift(lambda a, b: a + b, saw(4, 0, 20), 60).' },
+  lift: { sig: 'lift(fn, *sources)', doc: 'Combine signals or constants with an ordinary function, for anything the operators do not cover: lift(lambda a, b: max(a, b), sine(4, 0, 1), saw(3, 0, 1)). Plain arithmetic needs no lift — signals support + - * / % ** and abs() in either order.' },
   log: { sig: 'log(*args)', doc: 'Print to the log pane.' },
 
   circle: { sig: 'circle(x=0, y=0, r=0.15, **opts)', doc: 'Spawn a circle. Like a note, it has a lifetime: it grows and fades over `life` beats, which is what turns one event into smooth motion.' },
