@@ -1,7 +1,7 @@
 # 10 - visuals
 #
 # Press the "visuals" button in the header (or Cmd+Shift+V), then Run.
-# Cmd+\ fades the editor away for full screen.
+# Drag the code slider to fade the editor, or Cmd+\ to slam it away and back.
 #
 # A shape is a note. circle() is timestamped exactly like play(), and the
 # renderer grows and fades it across `life` beats - so one event per beat

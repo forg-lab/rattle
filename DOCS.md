@@ -209,7 +209,9 @@ and none of them need names.
 ## Visuals
 
 Press **visuals** in the header (or `Cmd/Ctrl+Shift+V`) and the canvas appears
-behind the code. `Cmd/Ctrl+\` fades the editor away for full screen.
+behind the code, at full strength. The **code** slider beside it fades the
+editor so you can see more of them; `Cmd/Ctrl+\` slams it to nothing and back,
+and `Escape` always returns the code if you lose it.
 
 ```python
 @live_loop("viz", sync="drums")
@@ -352,6 +354,9 @@ parser eventually gave up.
 |---|---|
 | `Cmd/Ctrl+Enter` | run the buffer |
 | `Cmd/Ctrl+.` | stop everything |
+| `Cmd/Ctrl+Shift+V` | visuals on/off |
+| `Cmd/Ctrl+Shift+L` | minimise the log |
+| `Cmd/Ctrl+\` | fade the code away and back |
 | `Tab` | accept a completion, otherwise indent |
 | `Shift+Tab` | dedent |
 | `Ctrl+Space` | force completions |

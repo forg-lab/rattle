@@ -69,7 +69,7 @@ const view = new EditorView({
         { key: 'Mod-.', preventDefault: true, run: () => (stop(), true) },
         { key: 'Mod-Shift-v', preventDefault: true, run: () => (setViz(!vizOn), true) },
         { key: 'Mod-Shift-l', preventDefault: true, run: () => (setLogMin(!logIsMin()), true) },
-        { key: 'Mod-\\', preventDefault: true, run: () => (togglePerform(), true) },
+        { key: 'Mod-\\', preventDefault: true, run: () => (toggleCodeFade(), true) },
         // CodeMirror leaves Tab unbound on purpose (it moves focus, for
         // keyboard accessibility). In a Python editor that makes indentation
         // impossible, so take it over — and let Escape hand focus back.
@@ -83,8 +83,10 @@ const view = new EditorView({
         {
           key: 'Escape',
           run: (v) => {
-            if (document.body.classList.contains('perform')) {
-              document.body.classList.remove('perform');
+            // an editor faded to nothing is disorienting; always leave a way back
+            if (Number(codeOpacity.value) === 0) {
+              codeOpacity.value = String(fadeMemory || 100);
+              applyCodeOpacity();
               return true;
             }
             return closeCompletion(v);
@@ -116,14 +118,28 @@ function setViz(on) {
   vizOn = on;
   document.body.classList.toggle('viz-on', on);
   if (!on) {
-    document.body.classList.remove('perform');
     visuals.panic();
+    // never leave the code faded with nothing behind it to look at
+    codeOpacity.value = 100;
+    applyCodeOpacity();
   }
 }
 
-function togglePerform() {
+// Cmd+\ slams the code out of the way and back. The slider is the mechanism;
+// this is just the gesture you want mid-performance, when hunting for a
+// slider is not an option.
+let fadeMemory = 100;
+
+function toggleCodeFade() {
   if (!vizOn) setViz(true);
-  document.body.classList.toggle('perform');
+  const now = Number(codeOpacity.value);
+  if (now > 0) {
+    fadeMemory = now;
+    codeOpacity.value = '0';
+  } else {
+    codeOpacity.value = String(fadeMemory || 100);
+  }
+  applyCodeOpacity();
 }
 const logEl = document.getElementById('log');
 const statusEl = document.getElementById('status');
@@ -476,13 +492,15 @@ logBtn.onclick = () => setLogMin(!logIsMin());
 try { if (localStorage.getItem('rattle:log-min') === '1') setLogMin(true); } catch (_) { /* private mode */ }
 
 const vizBtn = document.getElementById('viz-toggle');
-const vizOpacity = document.getElementById('viz-opacity');
+const codeOpacity = document.getElementById('code-opacity');
+
+function applyCodeOpacity() {
+  document.documentElement.style.setProperty('--code-opacity', String(codeOpacity.value / 100));
+}
+
 vizBtn.onclick = () => setViz(!vizOn);
-vizOpacity.oninput = () => {
-  document.documentElement.style.setProperty('--viz-opacity', String(vizOpacity.value / 100));
-  if (Number(vizOpacity.value) > 0 && !vizOn) setViz(true);
-};
-document.documentElement.style.setProperty('--viz-opacity', String(vizOpacity.value / 100));
+codeOpacity.oninput = applyCodeOpacity;
+applyCodeOpacity();
 
 const demoSel = document.getElementById('demo');
 for (const d of DEMOS) {

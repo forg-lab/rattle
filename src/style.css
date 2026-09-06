@@ -141,8 +141,9 @@ aside {
   z-index: 0;
   pointer-events: none;
   display: none;
-  opacity: var(--viz-opacity, .6);
-  transition: opacity .25s ease;
+  /* Turning visuals on means turning them on. What you fade to see more of
+     them is the code, via --code-opacity below. */
+  opacity: 1;
 }
 
 body.viz-on #viz { display: block; }
@@ -165,6 +166,9 @@ body.viz-on #editor .cm-gutters { text-shadow: 0 1px 3px rgba(0, 0, 0, .9); }
 body.viz-on #editor {
   background: rgba(22, 24, 29, var(--scrim, .62));
   backdrop-filter: blur(2px);
+  /* fades the scrim along with the text, so the code recedes as one layer */
+  opacity: var(--code-opacity, 1);
+  transition: opacity .12s linear;
 }
 
 /* translucent chrome is what makes it read as a backdrop rather than a widget */
@@ -174,18 +178,21 @@ body.viz-on aside {
   backdrop-filter: blur(12px) saturate(1.15);
 }
 
-/* Perform mode. opacity, never display:none - hiding #editor that way makes
-   CodeMirror lose its measured geometry and forces a reflow on the way back. */
-body.perform header,
-body.perform aside,
-body.perform #editor {
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .45s ease;
-}
-body.perform #viz { opacity: 1; }
 
-#viz-opacity {
+/* only meaningful with something behind the code to reveal */
+#code-fade { display: none; }
+body.viz-on #code-fade {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+#code-fade span {
+  font-size: 11px;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+#code-opacity {
   width: 74px;
   accent-color: var(--accent);
   cursor: pointer;
