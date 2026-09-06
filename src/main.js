@@ -6,7 +6,7 @@ import { indentUnit } from '@codemirror/language';
 import { indentMore, indentLess } from '@codemirror/commands';
 import {
   autocompletion, acceptCompletion, closeCompletion,
-  startCompletion, moveCompletionSelection, completionStatus,
+  startCompletion, moveCompletionSelection,
 } from '@codemirror/autocomplete';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { rattleCompletions } from './complete.js';
@@ -50,6 +50,27 @@ let sinceRun = null;
 // EditorView that references it.
 const hoverConf = new Compartment();
 
+// Whether Enter or Tab takes a completion. One or the other, never both: the
+// key that does not accept keeps its ordinary job, so Enter still makes a
+// newline and Tab still indents.
+const acceptConf = new Compartment();
+
+const acceptKeymap = (useTab) => Prec.highest(keymap.of(
+  useTab
+    ? [{
+        key: 'Tab',
+        preventDefault: true,
+        run: (v) => acceptCompletion(v) || indentMore(v),
+        shift: indentLess,
+      }]
+    : [
+        // acceptCompletion returns false with no popup open, so this falls
+        // through to the ordinary newline
+        { key: 'Enter', run: acceptCompletion },
+        { key: 'Tab', preventDefault: true, run: indentMore, shift: indentLess },
+      ],
+));
+
 const view = new EditorView({
   parent: document.getElementById('editor'),
   state: EditorState.create({
@@ -63,6 +84,7 @@ const view = new EditorView({
       errField,
       sliderField,
       hoverConf.of(getPref('hovers') ? dslHover : []),
+      acceptConf.of(acceptKeymap(getPref('tabAccepts'))),
       // defaultKeymap:false because it binds Enter to acceptCompletion, which
       // steals every newline you type while the popup is open. Tab accepts
       // instead; Enter always means Enter.
@@ -81,25 +103,6 @@ const view = new EditorView({
         // CodeMirror leaves Tab unbound on purpose (it moves focus, for
         // keyboard accessibility). In a Python editor that makes indentation
         // impossible, so take it over — and let Escape hand focus back.
-        {
-          key: 'Tab',
-          preventDefault: true,
-          run: (v) => acceptCompletion(v) || indentMore(v),
-          shift: indentLess,
-        },
-        {
-          // Enter accepts a completion you were actually typing. A popup that
-          // appeared unbidden - after '(' or a ',' - must never eat a newline,
-          // so only accept when there is a word prefix under the cursor.
-          key: 'Enter',
-          run: (v) => {
-            if (completionStatus(v.state) !== 'active') return false;
-            const pos = v.state.selection.main.head;
-            const before = v.state.doc.sliceString(Math.max(0, pos - 1), pos);
-            if (!/[A-Za-z0-9_]/.test(before)) return false;
-            return acceptCompletion(v);
-          },
-        },
         { key: 'Ctrl-Space', run: startCompletion },
         {
           key: 'Escape',
@@ -558,6 +561,7 @@ const settingsBtn = document.getElementById('settings-btn');
 const settingsPanel = document.getElementById('settings');
 const prefLineNumbers = document.getElementById('pref-linenumbers');
 const prefHovers = document.getElementById('pref-hovers');
+const prefTabAccepts = document.getElementById('pref-tabaccepts');
 const prefLogMin = document.getElementById('pref-logmin');
 
 function setLineNumbers(on) {
@@ -572,6 +576,12 @@ function setHovers(on) {
   setPref('hovers', on);
 }
 
+function setTabAccepts(on) {
+  view.dispatch({ effects: acceptConf.reconfigure(acceptKeymap(on)) });
+  prefTabAccepts.checked = on;
+  setPref('tabAccepts', on);
+}
+
 function openSettings(open) {
   settingsPanel.hidden = !open;
   settingsBtn.setAttribute('aria-expanded', String(open));
@@ -583,6 +593,7 @@ settingsBtn.onclick = (e) => {
 };
 prefLineNumbers.onchange = () => setLineNumbers(prefLineNumbers.checked);
 prefHovers.onchange = () => setHovers(prefHovers.checked);
+prefTabAccepts.onchange = () => setTabAccepts(prefTabAccepts.checked);
 prefLogMin.onchange = () => setLogMin(prefLogMin.checked);
 
 // click away or Escape to dismiss
@@ -595,6 +606,7 @@ document.addEventListener('keydown', (e) => {
 
 // apply what was saved last time
 setHovers(getPref('hovers'));
+setTabAccepts(getPref('tabAccepts'));
 setLineNumbers(getPref('lineNumbers'));
 setLogMin(getPref('logMin'));
 

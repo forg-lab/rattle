@@ -10,6 +10,7 @@ const DEFAULTS = {
   lineNumbers: true,
   logMin: false,
   hovers: true,
+  tabAccepts: false,   // false = Enter accepts completions
 };
 
 let cache = null;
