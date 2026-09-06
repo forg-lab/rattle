@@ -6,7 +6,7 @@ import { indentUnit } from '@codemirror/language';
 import { indentMore, indentLess } from '@codemirror/commands';
 import {
   autocompletion, acceptCompletion, closeCompletion,
-  startCompletion, moveCompletionSelection,
+  startCompletion, moveCompletionSelection, completionStatus,
 } from '@codemirror/autocomplete';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { rattleCompletions } from './complete.js';
@@ -86,6 +86,19 @@ const view = new EditorView({
           preventDefault: true,
           run: (v) => acceptCompletion(v) || indentMore(v),
           shift: indentLess,
+        },
+        {
+          // Enter accepts a completion you were actually typing. A popup that
+          // appeared unbidden - after '(' or a ',' - must never eat a newline,
+          // so only accept when there is a word prefix under the cursor.
+          key: 'Enter',
+          run: (v) => {
+            if (completionStatus(v.state) !== 'active') return false;
+            const pos = v.state.selection.main.head;
+            const before = v.state.doc.sliceString(Math.max(0, pos - 1), pos);
+            if (!/[A-Za-z0-9_]/.test(before)) return false;
+            return acceptCompletion(v);
+          },
         },
         { key: 'Ctrl-Space', run: startCompletion },
         {

@@ -361,10 +361,15 @@ parser eventually gave up.
 These work wherever focus happens to be — after clicking a header control, or
 before you have clicked into the code at all. Only `Tab`, `Escape` and the
 completion keys are editor-scoped, since those only mean anything while typing.
-| `Tab` | accept a completion, otherwise indent |
+| `Enter` | accept the completion you are typing |
+| `Tab` | accept any completion, otherwise indent |
 | `Shift+Tab` | dedent |
 | `Ctrl+Space` | force completions |
 | `Escape` | dismiss completions |
+
+`Enter` takes the completion you are typing. A popup that appeared unbidden —
+after an open paren or a comma — is never accepted by `Enter`, so it cannot eat
+a newline; take those with `Tab`, which accepts either kind.
 
 Completions are context-aware. Open a paren or type a comma and the call's
 options appear straight away — no prefix to guess at, which is exactly the
