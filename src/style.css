@@ -322,6 +322,13 @@ body.no-gutter #editor .cm-gutters { display: none; }
     flex-wrap: nowrap;
     min-height: 48px;
     box-sizing: border-box;
+    /* The drawer lives inside the header, and backdrop-filter (applied when
+       visuals are on) makes the header a stacking context - which scopes the
+       drawer's z-index inside it. Lift the header above the scrim so the
+       drawer comes with it, instead of relying on the drawer's own z-index
+       reaching the root. */
+    position: relative;
+    z-index: 41;
   }
   #nav-toggle { display: inline-flex; }
 
@@ -349,12 +356,25 @@ body.no-gutter #editor .cm-gutters { display: none; }
   }
   body.nav-open #tools { transform: translateX(0); }
 
-  body.nav-open::after {
+  /* Hung off #app, NOT body. With visuals on, #app gets a z-index and becomes
+     a stacking context, which scopes the drawer's z-index inside it - a scrim
+     in the root context then sits above the whole drawer and swallows every
+     tap. Sharing #app's context keeps the two comparable. */
+  body.nav-open #app::after {
     content: '';
     position: fixed;
     inset: 48px 0 0 0;
     z-index: 39;
     background: rgba(0, 0, 0, .5);
+  }
+
+  /* backdrop-filter on an ancestor makes it the containing block for fixed
+     descendants, so the blurred header was sizing the drawer to itself: top:48
+     bottom:0 against a 48px box collapsed it to a sliver. The blur is a
+     desktop nicety; the drawer working is not. */
+  body.viz-on header {
+    backdrop-filter: none;
+    background: var(--panel);
   }
 
   /* the spacer only makes sense pushing things apart on one row */
