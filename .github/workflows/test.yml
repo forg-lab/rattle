@@ -1,0 +1,29 @@
+name: tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A superseded run on the same branch tells you nothing; drop it.
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+      # No npm ci on purpose. The suite imports nothing but node built-ins and
+      # the app's own source: MicroPython is vendored under public/, and the
+      # renderer is exercised through a stub canvas. Nothing to install, so the
+      # whole run is a few seconds.
+      - run: npm test

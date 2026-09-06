@@ -1,5 +1,7 @@
 # rattle
 
+[![tests](https://github.com/forg-lab/rattle/actions/workflows/test.yml/badge.svg)](https://github.com/forg-lab/rattle/actions/workflows/test.yml)
+
 A Sonic Pi-style live-coding environment in the browser, driven by Python.
 Sound and generative visuals from the same timestamped events, so they cannot
 drift apart. Fully client-side: MicroPython in a Web Worker, Web Audio and
@@ -15,6 +17,25 @@ Canvas 2D, no backend.
 
 Cmd+Enter runs the buffer, Cmd+. stops. Edit while it plays — `live_loop`
 bodies swap in at the next loop boundary without dropping the beat.
+
+    npm test           # the whole suite, a couple of seconds
+
+## Tests
+
+`test/` runs the real `runtime.py` inside the real MicroPython wasm, through
+the real source transform — the same three pieces the browser uses. There is no
+mock scheduler, so a passing test is evidence about what ships.
+
+| | |
+|---|---|
+| `emit.mjs` | what `runtime.py` puts on the wire: signals, the `k=v` format, tempo-relative `life`, the shape vocabulary, and the claim the visuals rest on — that a drum and a shape written on the same beat carry the *same* timestamp |
+| `render.mjs` | the canvas renderer against a stub context that records every call: envelopes, the trail-fade burn-in guard, the runaway cap, and that no invalid geometry ever reaches the canvas API |
+| `demos.mjs` | every demo in `demos/` runs 20 beats with no thread dying and nothing outside plausible range |
+| `snippets.mjs` | every runnable snippet on the docs page still runs — the docs are interactive, so a stale example is a broken feature |
+
+The suite installs nothing: it imports only node built-ins and the app's own
+source, with MicroPython vendored under `public/`. Run one file on its own with
+`node test/render.mjs`, or `npm test -- -v` for the full output of each.
 
 ## Demos
 
