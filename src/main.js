@@ -515,7 +515,7 @@ function setLogMin(min) {
 }
 
 const logIsMin = () => document.body.classList.contains('log-min');
-logBtn.onclick = () => setLogMin(!logIsMin());
+logBtn.onclick = () => { setLogMin(!logIsMin()); view.focus(); };
 
 // ---------------------------------------------------------------- settings
 
@@ -592,8 +592,11 @@ function applyCodeOpacity() {
   document.documentElement.style.setProperty('--code-opacity', String(codeOpacity.value / 100));
 }
 
-vizBtn.onclick = () => setViz(!vizOn);
+vizBtn.onclick = () => { setViz(!vizOn); view.focus(); };
 codeOpacity.oninput = applyCodeOpacity;
+// Hand the keyboard back after a drag. Only on pointerup, so arrow keys still
+// work if you are driving the slider from the keyboard.
+codeOpacity.addEventListener('pointerup', () => view.focus());
 applyCodeOpacity();
 
 const demoSel = document.getElementById('demo');

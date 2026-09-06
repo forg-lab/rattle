@@ -366,9 +366,10 @@ completion keys are editor-scoped, since those only mean anything while typing.
 | `Ctrl+Space` | force completions |
 | `Escape` | dismiss completions |
 
-Completions are context-aware: inside `sample("` you get drum names, inside
-`scale(x, "` scale names, after `play(` its keyword arguments — each with its
-signature and description.
+Completions are context-aware. Open a paren or type a comma and the call's
+options appear straight away — no prefix to guess at, which is exactly the
+moment you want to know what a function takes. Inside `sample("` you get drum
+names, inside `scale(x, "` scale names, and a bare word lists the language.
 
 Hovering a function shows its signature, what it does, and the options it
 takes — the same text the completion popup uses, so there is one copy of it.

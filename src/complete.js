@@ -78,11 +78,17 @@ export function rattleCompletions(context) {
   }
 
   const word = context.matchBefore(/[A-Za-z_][A-Za-z0-9_]*$/);
-  if (!word && !context.explicit) return null;
   const from = word ? word.from : pos;
-
-  // --- keyword arguments for the call we are inside
   const call = enclosingCall(text, from);
+
+  // Sitting right after '(' or a ',' inside a known call: offer that call's
+  // arguments without waiting to be asked. This is the moment you most want to
+  // know what a function accepts, and it is exactly when there is no prefix to
+  // type-ahead from.
+  const atArgumentSlot = call && PARAMS[call.name] && /[(,]\s*$/.test(before);
+
+  if (!word && !context.explicit && !atArgumentSlot) return null;
+
   const options = [];
   if (call && PARAMS[call.name]) {
     for (const p of PARAMS[call.name]) {
@@ -91,6 +97,12 @@ export function rattleCompletions(context) {
         apply: p + '=', boost: 50,
       });
     }
+  }
+
+  // With no prefix typed, the whole function list would be noise - the useful
+  // answer to "what goes here" is this call's own arguments.
+  if (!word && atArgumentSlot) {
+    return { from: pos, options, validFor: /^[A-Za-z0-9_]*$/ };
   }
 
   // --- the DSL itself
