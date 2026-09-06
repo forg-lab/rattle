@@ -1,5 +1,11 @@
 /* Design tokens and editor chrome shared by the app and the docs page. */
 
+/* The UA rule for [hidden] is display:none at the lowest precedence, so ANY
+   author rule that sets display silently defeats it - which is exactly how the
+   settings popover ended up permanently on screen. Restate it so toggling
+   .hidden works whatever else an element is styled as. */
+[hidden] { display: none !important; }
+
 :root {
   --bg: #16181d;
   --panel: #1c1f26;
