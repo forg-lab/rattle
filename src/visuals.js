@@ -108,6 +108,24 @@ export class Visuals {
 
   get count() { return this.shapes.length; }
 
+  // Re-point the renderer at a different canvas. The docs page draws each
+  // example into its own box rather than one shared backdrop, so the shape
+  // sits beside the line that made it.
+  attach(canvas) {
+    if (this.canvas === canvas) return;
+    this.canvas = canvas;
+    this.ctx = canvas ? canvas.getContext('2d') : null;
+    this.shapes.length = 0;
+    this.st = DEFAULT_STATE();
+    this.dpr = 1;
+    this.cw = 0;
+    this.ch = 0;
+    if (canvas) {
+      this.#resize();
+      this.#hardClear();
+    }
+  }
+
   // --- rendering ----------------------------------------------------------
 
   #resize() {

@@ -23,8 +23,18 @@ import './docs.css';
 // ------------------------------------------------------------ shared engine
 
 const engine = new Engine();
-const visuals = new Visuals(document.getElementById('viz'));
-let vizOn = false;
+const visuals = new Visuals(null);   // attached to a box's canvas on first draw
+
+// Create the screen for a box the first time it actually draws, so the 27
+// sound-only entries stay exactly as they were.
+function ensureCanvas(box) {
+  if (!box.canvas) {
+    box.canvas = document.createElement('canvas');
+    box.canvas.className = 'entry-canvas';
+    box.editorEl.insertAdjacentElement('afterend', box.canvas);
+  }
+  if (visuals.canvas !== box.canvas) visuals.attach(box.canvas);
+}
 const statusEl = document.getElementById('status');
 
 const isolated = typeof SharedArrayBuffer !== 'undefined' && self.crossOriginIsolated;
@@ -59,6 +69,8 @@ function makeBox(entry) {
     hq: [],
     vq: [],
     gq: [],
+    canvas: null,
+    editorEl: null,
     sinceRun: null,
     sitesDirty: false,
   };
@@ -165,9 +177,7 @@ function stopAll(opts = {}) {
     active.gq.length = 0;
     active = null;
   }
-  if (vizOn) {
-    vizOn = false;
-    document.body.classList.remove('viz-on');
+  if (visuals.canvas) {
     visuals.panic();
   }
   if (!opts.keepStatus) {
@@ -270,11 +280,7 @@ function consume(box, data) {
   box.hq.sort((x, y) => x.at - y.at);
   box.vq.sort((x, y) => x.at - y.at);
   box.gq.sort((x, y) => x.at - y.at);
-  // reveal the canvas only once a box actually draws
-  if (box.gq.length && !vizOn) {
-    vizOn = true;
-    document.body.classList.add('viz-on');
-  }
+  if (box.gq.length) ensureCanvas(box);
   if (newSliders) pushSliders(box);
   if (box.sitesDirty && !sliderBusy) pushSites(box);
 }
@@ -342,7 +348,7 @@ function frame() {
       if (g.draw) visuals.spawn(g.at, g.draw);
       else visuals.setState(g.state);
     }
-    if (vizOn) visuals.tick(audible);
+    if (active.canvas) visuals.tick(audible);
   }
   requestAnimationFrame(frame);
 }
@@ -406,6 +412,7 @@ for (const section of SECTIONS) {
 
     const editorEl = document.createElement('div');
     editorEl.className = 'entry-editor';
+    box.editorEl = editorEl;
 
     const bar = document.createElement('div');
     bar.className = 'entry-bar';
