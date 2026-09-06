@@ -357,6 +357,10 @@ parser eventually gave up.
 | `Cmd/Ctrl+Shift+V` | visuals on/off |
 | `Cmd/Ctrl+Shift+L` | minimise the log |
 | `Cmd/Ctrl+\` | fade the code away and back |
+
+These work wherever focus happens to be — after clicking a header control, or
+before you have clicked into the code at all. Only `Tab`, `Escape` and the
+completion keys are editor-scoped, since those only mean anything while typing.
 | `Tab` | accept a completion, otherwise indent |
 | `Shift+Tab` | dedent |
 | `Ctrl+Space` | force completions |

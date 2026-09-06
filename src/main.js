@@ -478,6 +478,23 @@ function stop() {
 document.getElementById('run').onclick = run;
 document.getElementById('stop').onclick = stop;
 
+// The editor's own keymap only fires while the editor has focus, and the header
+// has enough controls now that clicking any of them silently disables the one
+// shortcut that matters. These are app-level commands, so bind them app-level.
+// defaultPrevented means CodeMirror already handled it - do not run it twice.
+document.addEventListener('keydown', (e) => {
+  if (e.defaultPrevented || !(e.metaKey || e.ctrlKey)) return;
+  const k = e.key.toLowerCase();
+  if (e.key === 'Enter') { e.preventDefault(); run(); }
+  else if (e.key === '.') { e.preventDefault(); stop(); }
+  else if (e.shiftKey && k === 'v') { e.preventDefault(); setViz(!vizOn); }
+  else if (e.shiftKey && k === 'l') { e.preventDefault(); setLogMin(!logIsMin()); }
+  else if (e.key === '\\') { e.preventDefault(); toggleCodeFade(); }
+});
+
+// land ready to type and run, rather than one unexplained click away from it
+view.focus();
+
 const aside = document.querySelector('aside');
 const logBtn = document.getElementById('log-toggle');
 
