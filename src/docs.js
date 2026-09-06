@@ -323,7 +323,23 @@ configureSliders({
 
 // ------------------------------------------------------------- clock + view
 
+let lastFrameError = '';
+
 function frame() {
+  try {
+    frameBody();
+  } catch (e) {
+    const msg = String((e && e.message) || e);
+    if (msg !== lastFrameError && active) {
+      lastFrameError = msg;
+      say(active, 'visuals: ' + msg, 'err');
+    }
+  }
+  // Always reschedule: this loop is also the audio clock.
+  requestAnimationFrame(frame);
+}
+
+function frameBody() {
   const ct = engine.ctx.currentTime;
   const rel = ct - engine.t0;
   if (isolated) {
@@ -350,7 +366,6 @@ function frame() {
     }
     if (active.canvas) visuals.tick(audible);
   }
-  requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 

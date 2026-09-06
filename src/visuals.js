@@ -194,15 +194,21 @@ export class Visuals {
       const a = sh.alpha * env;
       if (a <= 0.004) continue;
 
-      const rr = sh.r * (1 + (sh.grow - 1) * u);
+      // grow < 1 shrinks, and grow < 0 shrinks straight through zero - the
+      // canvas API throws IndexSizeError on a negative radius, so nothing is
+      // as small as this gets. Also catches a NaN arriving from signal
+      // arithmetic (0/0 and friends).
+      let rr = sh.r * (1 + (sh.grow - 1) * u);
+      if (!(rr > 0)) rr = 0;
       const px = sh.x + sh.vx * u;
       const py = sh.y + sh.vy * u;
+      if (!Number.isFinite(px) || !Number.isFinite(py)) continue;
       const rot = sh.rot + sh.spin * u * TAU;
 
       const col = `rgba(${sh.cr},${sh.cg},${sh.cb},${a.toFixed(3)})`;
       ctx.fillStyle = col;
       ctx.strokeStyle = col;
-      ctx.lineWidth = sh.width;
+      ctx.lineWidth = sh.width > 0 ? sh.width : 0.0005;
 
       for (let k = 0; k < seg; k++) {
         ctx.save();

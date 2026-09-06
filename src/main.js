@@ -361,7 +361,27 @@ function consume(data) {
 
 // -------------------------------------------- clock + highlight render loop
 
+// Reported once per distinct message: a throw here would otherwise spam the
+// log sixty times a second.
+let lastFrameError = '';
+
 function frame() {
+  try {
+    frameBody();
+  } catch (e) {
+    const msg = String((e && e.message) || e);
+    if (msg !== lastFrameError) {
+      lastFrameError = msg;
+      say('visuals: ' + msg, 'err');
+    }
+  }
+  // ALWAYS reschedule. This loop also publishes the audio clock the worker
+  // parks on, so letting an exception escape would stop the music, not just
+  // the picture.
+  requestAnimationFrame(frame);
+}
+
+function frameBody() {
   const ct = engine.ctx.currentTime;
   const rel = ct - engine.t0;
 
@@ -390,8 +410,6 @@ function frame() {
     else visuals.setState(g.state);
   }
   if (vizOn) visuals.tick(audible);
-
-  requestAnimationFrame(frame);
 }
 
 requestAnimationFrame(frame);

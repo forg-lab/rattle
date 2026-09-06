@@ -238,7 +238,7 @@ names belong to signals, hence `rect` and `poly(n=…)`.
 |---|---|---|
 | `life` | 1 | how long it lives, **in beats** |
 | `hue` `sat` `val` `alpha` | | colour, hue `0..1` |
-| `grow` | 1 | radius multiplier across its life; `4` quadruples |
+| `grow` | 1 | radius multiplier across its life; `4` quadruples, `0` shrinks to nothing. Negative shrinks *through* zero and stays there — nothing is smaller than a point |
 | `spin` | 0 | rotations across its life |
 | `vx` `vy` | 0 | total drift across its life |
 | `fill` `width` | 1, 0.006 | filled, or stroked at this width |
