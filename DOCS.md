@@ -409,6 +409,11 @@ names, inside `scale(x, "` scale names, and a bare word lists the language.
 Hovering a function shows its signature, what it does, and the options it
 takes — the same text the completion popup uses, so there is one copy of it.
 
+Hovering an *argument* explains that argument and gives its default. It reads
+the call it sits in, so the answer fits the call: `width` in `circle(...)` is a
+stroke width, `width` in `square(...)` is pulse width, and `n` means sides in
+`poly(...)` but wedges in `mirror(...)`.
+
 The gear in the header holds display preferences — hover docs, line numbers,
 and whether the log starts minimised. They persist in `localStorage` rather than a cookie,
 since nothing here needs to reach a server, and every access is guarded so a

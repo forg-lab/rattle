@@ -109,6 +109,115 @@ export const VIZ_ARGS = [
   'atk', 'curve', 'fill', 'width',
 ];
 
+// Per-argument documentation, for hover. [meaning, default].
+//
+// Defaults are the ones the code actually applies (runtime.py's signature, or
+// visuals.js where Python passes the value straight through) - not the ones the
+// prose remembers.
+//
+// Most arguments mean the same thing wherever they appear, so they live here
+// once. The handful whose meaning depends on the call get an override below.
+export const PARAM_DOCS = {
+  // --- sound
+  amp: ['Volume. 0 is silence, not an error.', '1'],
+  pan: ['Stereo position: -1 hard left, 0 centre, 1 hard right.', '0'],
+  attack: ['Fade-in time, in seconds.', '0.01'],
+  decay: ['Time to fall from the peak to the sustain level, in seconds.', '0'],
+  sustain: ['Level held after the decay, 0..1.', '0'],
+  release: ['Fade-out time after the sustain, in seconds.', '0.5'],
+  cutoff: ['Low-pass filter, as a MIDI note number - so 100 is bright, 50 is dark.', 'off'],
+  res: ['Filter resonance. Higher rings more at the cutoff.', '0.3'],
+  room: ['Reverb send, 0..1.', '0'],
+  synth: ['Override the synth for this note only.', 'current'],
+  rate: ['Playback speed. 2 is an octave up and half as long. Must be positive.', '1'],
+  note: ['A MIDI number (60), a note name ("e3"), or a list for a chord.'],
+
+  // --- structure
+  sync: ['Start aligned to another loop, by name, instead of immediately.'],
+  delay: ['Offset this loop from the beat, in beats.', '0'],
+  beats: ['How far to advance this thread\u2019s logical clock.'],
+
+  // --- signals and sliders
+  period: ['How many beats one full cycle takes.', '4'],
+  lo: ['Bottom of the range.', '0'],
+  hi: ['Top of the range.', '1'],
+  phase: ['Offset into the cycle, in turns. 0.25 starts a quarter of the way in.', '0'],
+  values: ['The list to step through, one entry per `step` beats. Wraps.'],
+  label: ['Name shown on the slider.'],
+
+  // --- shapes: position and life
+  x: ['Horizontal position. -1 is the left edge, 1 the right.', '0'],
+  y: ['Vertical position. -1 is the bottom, 1 the top - y is up.', '0'],
+  life: ['How long it lives, in beats. It grows and fades across this.', '1'],
+  x2: ['Horizontal position of the far end.', '0'],
+  y2: ['Vertical position of the far end.', '0'],
+
+  // --- shapes: size
+  r: ['Radius, setting rx and ry together.', '0.15'],
+  rx: ['Horizontal radius. Overrides r on this axis alone.', 'r'],
+  ry: ['Vertical radius. Overrides r on this axis alone.', 'r'],
+  w: ['Width.', '0.3'],
+  h: ['Height.', '0.3'],
+  a0: ['Start angle, in turns.', '0'],
+  a1: ['End angle, in turns. a1=1 is a full circle.', '0.5'],
+
+  // --- shapes: motion. Every v- is a TOTAL change across the life, added to
+  // the starting value - never a speed and never a multiplier.
+  vx: ['Total horizontal drift across its life. A distance, not a speed.', '0'],
+  vy: ['Total vertical drift across its life. A distance, not a speed.', '0'],
+  vr: ['How much the radius grows across its life - added, not multiplied. Negative shrinks through zero to a point.', '0'],
+  vrx: ['Growth of the horizontal radius alone.', 'vr'],
+  vry: ['Growth of the vertical radius alone.', 'vr'],
+  vw: ['How much the width grows across its life, added not multiplied.', '0'],
+  vh: ['How much the height grows across its life, added not multiplied.', '0'],
+  vx2: ['Drift of the far end alone, which stretches the line rather than moving it.', '0'],
+  vy2: ['Drift of the far end alone, which stretches the line rather than moving it.', '0'],
+  spin: ['Rotations across its life. 1 is one full turn.', '0'],
+  rot: ['Starting rotation, in turns.', '0'],
+
+  // --- shapes: colour and ink
+  hue: ['Colour, 0..1 around the wheel.', '0.55'],
+  sat: ['Saturation, 0..1. 0 is grey.', '0.75'],
+  val: ['Brightness, 0..1.', '1'],
+  alpha: ['Opacity, 0..1, before the life envelope fades it.', '1'],
+  fill: ['1 solid, 0 an outline stroked at `width`.', '1'],
+  width: ['Stroke width, used when fill=0.', '0.006'],
+  atk: ['Fraction of the life spent fading in.', '0.03'],
+  curve: ['Decay shape. 1 is linear; higher falls away faster at the start.', '1.6'],
+  n: ['Number of sides.', '3'],
+  flip: ['1 mirrors alternate wedges, 0 just repeats them.', '0'],
+};
+
+// Arguments whose meaning genuinely changes with the call. Anything not listed
+// here means the same everywhere and lives in PARAM_DOCS above.
+export const PARAM_DOCS_BY_FUNC = {
+  square: { width: ['Pulse width, 0..1. 0.5 is a square wave; narrower reads as more nasal.', '0.5'] },
+  poly: { n: ['Number of sides. 3 is a triangle, 6 a hexagon; a large n reads as a circle.', '3'] },
+  mirror: { n: ['Kaleidoscope wedges. 1 is off. Capped at 12, since each one costs a draw per shape.', '1'] },
+  seq: { step: ['Beats per entry.', '1'] },
+  slider: {
+    lo: ['Bottom of the slider\u2019s travel. Taken from the signal if you pass one.', '0'],
+    hi: ['Top of the slider\u2019s travel. Taken from the signal if you pass one.', '1'],
+    step: ['Snap to this increment while dragging.', 'smooth'],
+  },
+  bg: {
+    hue: ['Colour, 0..1 around the wheel.', '0.62'],
+    sat: ['Saturation, 0..1. 0 is grey.', '0.35'],
+    val: ['Brightness, 0..1.', '0.06'],
+  },
+  arc: { r: ['Radius, setting rx and ry together.', '0.2'] },
+};
+
+/**
+ * Documentation for `param` as used in a call to `fn`.
+ * Returns [meaning, default] or null.
+ */
+export function paramDoc(fn, param) {
+  const byFunc = PARAM_DOCS_BY_FUNC[fn];
+  if (byFunc && byFunc[param]) return byFunc[param];
+  return PARAM_DOCS[param] || null;
+}
+
 export const PARAMS = {
   play: ['amp', 'pan', 'attack', 'decay', 'sustain', 'release', 'cutoff', 'res', 'room', 'synth'],
   sample: ['amp', 'pan', 'rate', 'cutoff', 'room'],

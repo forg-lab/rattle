@@ -135,3 +135,12 @@
   color: var(--dim);
   line-height: 1.7;
 }
+/* An argument tooltip names its owning call, dimmed, so the argument itself
+   stays the thing you read first. */
+.cm-hoverdoc .hd-owner { color: var(--dim); }
+.cm-hoverdoc .hd-param { color: var(--accent); }
+.cm-hoverdoc .hd-default {
+  margin: 6px 0 0;
+  font: 11px var(--mono);
+  color: var(--dim);
+}

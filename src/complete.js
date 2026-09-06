@@ -1,30 +1,5 @@
 import { FUNCS, PARAMS, SYNTHS, SAMPLES, SCALES, CHORDS } from './dsl.js';
-
-// Walk backwards to the call that encloses pos, and work out which argument
-// slot we are sitting in. Deliberately shallow: a bounded scan is plenty for
-// completions and costs nothing on every keystroke.
-function enclosingCall(text, pos) {
-  const floor = Math.max(0, pos - 500);
-  let depth = 0;
-  let commas = 0;
-  for (let i = pos - 1; i >= floor; i--) {
-    const c = text[i];
-    if (c === ')' || c === ']' || c === '}') depth++;
-    else if (c === '(' || c === '[' || c === '{') {
-      if (depth === 0) {
-        if (c !== '(') return null;
-        let j = i - 1;
-        while (j >= 0 && /\s/.test(text[j])) j--;
-        const end = j + 1;
-        while (j >= 0 && /[A-Za-z0-9_]/.test(text[j])) j--;
-        const name = text.slice(j + 1, end);
-        return name ? { name, argIndex: commas } : null;
-      }
-      depth--;
-    } else if (c === ',' && depth === 0) commas++;
-  }
-  return null;
-}
+import { enclosingCall } from './callsite.js';
 
 // The quote that is still open at the end of `line`, or null. Counting parity
 // beats matching a trailing quote: `sample("bd"` ends in a quote but the string
