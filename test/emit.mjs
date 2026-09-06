@@ -180,6 +180,52 @@ ok(rawS('slider(sine(8,-1,1), -0.5, 0.5)') === '-0.5..0.5',
 ok(rawS('slider(0.5)') === '0.0..1.0',
    'a plain number still defaults to 0..1', String(rawS('slider(0.5)')));
 
+// ------------------------------------------------ every(): "sometimes", statelessly
+// The point of asking about the beat rather than counting passes is that the
+// answer does not depend on the loop's step, and cannot fall out of step after
+// a hot swap.
+const hits = (body, step, beats = 17, bpm = 60) => {
+  const rr = run(`use_bpm(${bpm})\n@live_loop("d")\ndef d():\n    if ${body}:\n        sample("click")\n    sleep(${step})\n`, beats);
+  return rr.filter(x => x.kind === 'sample').map(x => x.t);
+};
+const sameBeats = (a, b) => a.length === b.length && a.every((v, i) => Math.abs(v - b[i]) < 1e-6);
+
+ok(sameBeats(hits('every(4)', 1), [0, 4, 8, 12, 16]), 'every(4) fires on the 4-beat grid',
+   hits('every(4)', 1).join(' '));
+ok(sameBeats(hits('every(4)', 0.25), [0, 4, 8, 12, 16]),
+   'and the loop\u2019s own step does not change that', hits('every(4)', 0.25).join(' '));
+ok(sameBeats(hits('every(4, 1)', 0.5), [1, 5, 9, 13]), 'offset shifts the grid',
+   hits('every(4, 1)', 0.5).join(' '));
+
+// the beat clock accumulates through seconds, so an awkward tempo is the case
+// a tolerance has to survive
+const odd = hits('every(4)', 0.25, 20, 104);
+const gridSec = 4 * (60 / 104);   // wire timestamps are seconds, the grid is beats
+ok(odd.length > 4 && odd.every((t, i) => Math.abs(t - i * gridSec) < 1e-5),
+   'every() holds the grid at an awkward tempo',
+   `bpm=104, every ${gridSec.toFixed(4)}s -> ${odd.slice(0, 4).join(' ')}`);
+ok(hits('every(0)', 1).length === 0, 'every(0) fires never rather than always');
+
+// ------------------------------------------------ signals as conditions
+ok(hits('sine(8) > 0.9', 1).length > 0, 'a signal comparison no longer raises',
+   hits('sine(8) > 0.9', 1).join(' '));
+ok(sameBeats(hits('sine(8) > 0.9', 1), [2, 10]),
+   'and reads the signal at the current beat', hits('sine(8) > 0.9', 1).join(' '));
+// Known limitation, deliberately pinned. Arithmetic has __radd__ and friends so
+// 60 + saw(...) works, but Python has no reflected form of a comparison and
+// MicroPython will not fall back to the operand's own __gt__ - so the signal
+// has to be on the left. If that ever changes, this test says so.
+const reflected = run(`@live_loop("d")\ndef d():\n    if 0.9 < sine(8):\n        sample("click")\n    sleep(1)\n`);
+ok(reflected.some(x => x.err && /__lt__/.test(x.err)),
+   'the signal must be on the LEFT of a comparison (no reflected form)',
+   (reflected.find(x => x.err) || {}).err || 'it worked now - drop this test');
+
+// a comparison is itself a signal, so it composes as a gate
+const gate = run(`use_bpm(60)\n@live_loop("d")\ndef d():\n    sample("hat", amp=(sine(8) > 0.9) * 0.3 + 0.05)\n    sleep(1)\n`, 9)
+  .filter(x => x.kind === 'sample').map(x => +x.kv.amp);
+ok(gate.filter(a => a > 0.3).length === 1 && gate.filter(a => a < 0.1).length === gate.length - 1,
+   'a comparison composes as a gate on a parameter', gate.join(' '));
+
 // --------------------------------------------- envelope times are in beats
 // Same rule as sleep() and a shape's life: a passage keeps its shape when you
 // change the tempo. The defaults matter as much as the explicit values - if

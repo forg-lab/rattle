@@ -74,6 +74,14 @@ export const FUNCS = {
   rrand: { sig: 'rrand(lo, hi)', doc: 'Random float in [lo, hi).' },
   rrand_i: { sig: 'rrand_i(lo, hi)', doc: 'Random integer in [lo, hi] inclusive.' },
   one_in: { sig: 'one_in(n)', doc: 'True with probability 1/n.' },
+  every: {
+    sig: 'every(n, offset=0)',
+    doc: 'True when this beat lands on the n-beat grid — the functional answer to "sometimes". No counter to advance and no state to fall out of step after a hot swap, so two loops asking every(8) always agree. It tests the grid, so n wants to be a multiple of the loop\u2019s own sleep.',
+  },
+  beat: {
+    sig: 'beat()',
+    doc: 'This thread\u2019s position in beats since the run started. every() is written in terms of it; use it directly for anything every() does not cover, such as beat() % 8 < 1 for the first beat of each bar.',
+  },
   choose: { sig: 'choose(seq)', doc: 'Pick a random element.' },
   ring: { sig: 'ring(seq)', doc: 'A list that wraps on out-of-range indexing, so r[9] works on a 4-element ring.' },
   slider: {
@@ -144,6 +152,7 @@ export const PARAM_DOCS = {
   phase: ['Offset into the cycle, in turns. 0.25 starts a quarter of the way in.', '0'],
   values: ['The list to step through, one entry per `step` beats. Wraps.'],
   label: ['Name shown on the slider.'],
+  offset: ['Shift the grid. every(4, 1) fires on beats 1, 5, 9 rather than 0, 4, 8.', '0'],
 
   // --- shapes: position and life
   x: ['Horizontal position. -1 is the left edge, 1 the right.', '0'],
@@ -222,6 +231,7 @@ export const PARAMS = {
   play: ['amp', 'pan', 'attack', 'decay', 'sustain', 'release', 'cutoff', 'res', 'room', 'synth'],
   sample: ['amp', 'pan', 'rate', 'cutoff', 'room'],
   live_loop: ['sync', 'delay'],
+  every: ['offset'],
   slider: ['lo', 'hi', 'step', 'label'],
   circle: ['x', 'y', 'r', 'rx', 'ry', 'vr', 'vrx', 'vry', ...VIZ_ARGS],
   rect: ['x', 'y', 'w', 'h', 'vw', 'vh', ...VIZ_ARGS],

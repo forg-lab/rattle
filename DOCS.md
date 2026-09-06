@@ -305,6 +305,54 @@ State changes land *on* the beat you wrote them on rather than easing across it.
 Blurring the downbeat is the one thing a visual should not do; if you want a
 slow drift, `bg(hue=sine(16, 0, 1))` is sampled on the grid like everything else.
 
+## Doing something sometimes
+
+```python
+every(4)               # True when this beat is on the 4-beat grid
+every(4, 1)            # ...shifted: beats 1, 5, 9 rather than 0, 4, 8
+beat()                 # this thread's position, in beats
+```
+
+`every` is the functional answer to "sometimes": there is no counter to advance
+and no state to fall out of step after a hot swap, so two loops asking
+`every(8)` always agree because both are asking about the beat rather than
+about how many times each has been round.
+
+```python
+@live_loop("hats")
+def hats():
+    sample("hat", amp=0.3)
+    if every(8):
+        sample("clap", amp=0.4)      # once a phrase, on the downbeat
+    sleep(0.25)
+```
+
+It tests the grid, so `n` wants to be a multiple of the loop's own `sleep` —
+`every(4)` in a loop that sleeps `0.25` fires once every sixteen passes, not
+sixteen times. A loop on a grid that never reaches a multiple of `n` never
+fires, which is the honest answer to a question that has none.
+
+For anything `every` does not cover, `beat()` is the clock it is written in
+terms of: `beat() % 8 < 1` is the whole first beat of each bar of eight.
+
+Signals can be conditions too, and compare into a signal of 0 or 1:
+
+```python
+if sine(8) > 0.9:                    # read at the current beat
+    sample("click")
+
+sample("hat", amp=(sine(8) > 0.9) * 0.3 + 0.05)     # ...or used as a gate
+```
+
+The signal has to be on the **left**. Arithmetic works either way round —
+`60 + saw(8, 0, 12)` is fine — because a signal defines the reflected forms of
+`+` and friends, but a comparison has no reflected form to define, so
+`0.9 < sine(8)` raises rather than quietly meaning something else.
+
+Reach for `every` when you mean "once every n beats" — a threshold on a sweep
+fires in a window whose width depends on both the threshold and your `sleep`,
+which is a fiddly way to say something simple.
+
 ## Randomness
 
 ```python

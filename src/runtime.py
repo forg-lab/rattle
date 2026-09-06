@@ -412,6 +412,39 @@ def one_in(n):
     return _rnd() < (1.0 / n)
 
 
+def beat():
+    """This thread's position, in beats, since the run started.
+
+    The clock every other timing question is asked of. every() is written in
+    terms of it, and so is anything it does not cover: beat() % 8 < 1 is the
+    first beat of each bar of 8.
+    """
+    return _beats()
+
+
+def every(n, offset=0.0):
+    """True when this beat lands on the n-beat grid. offset shifts the grid.
+
+    The functional answer to "sometimes": no counter to advance, no state to
+    get out of step after a hot swap. Two loops asking every(8) agree, because
+    both are asking about the beat rather than about how many times they have
+    each been round.
+
+    It tests the grid, so n wants to be a multiple of the loop's own sleep -
+    every(4) in a loop that sleeps 0.25 fires once every sixteen passes. A
+    loop on a grid that never reaches a multiple of n never fires, which is
+    the honest answer to a question that has none.
+    """
+    n = _val(n)
+    if not n or n <= 0:
+        return False
+    b = _beats() - _val(offset)
+    # The beat clock accumulates through seconds, so it drifts from the ideal
+    # grid: measured under 1e-8 beats over 20000 sleeps, which this clears a
+    # hundredfold while staying far below any offset worth writing.
+    return abs(b - n * round(b / n)) < 1e-6
+
+
 def choose(seq):
     if isinstance(seq, Ring):
         seq = seq.xs
@@ -492,6 +525,28 @@ class Signal:
 
     def __neg__(self):
         return Signal(lambda t: -self.fn(t))
+
+    # Comparison gives a signal of 0 or 1, so it composes like any other -
+    # amp=(sine(8) > 0.9) * 0.3 is a gate. __bool__ then reads it at the
+    # current beat, which is what makes `if sine(8) > 0.9:` mean anything.
+    def __lt__(self, o):
+        return Signal(lambda t: 1.0 if self.fn(t) < _at(o, t) else 0.0, 0, 1)
+
+    def __le__(self, o):
+        return Signal(lambda t: 1.0 if self.fn(t) <= _at(o, t) else 0.0, 0, 1)
+
+    def __gt__(self, o):
+        return Signal(lambda t: 1.0 if self.fn(t) > _at(o, t) else 0.0, 0, 1)
+
+    def __ge__(self, o):
+        return Signal(lambda t: 1.0 if self.fn(t) >= _at(o, t) else 0.0, 0, 1)
+
+    # Without this a signal in an `if` is just a truthy object, so
+    # `if sine(8):` silently ran every time. Equality is deliberately left
+    # alone: exact float equality on a continuous sweep is never what anyone
+    # means, and defining it would drag `is`-style checks through here too.
+    def __bool__(self):
+        return bool(self.fn(_beats()))
 
     def __abs__(self):
         return Signal(lambda t: abs(self.fn(t)))

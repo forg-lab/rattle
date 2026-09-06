@@ -74,6 +74,36 @@ def snare():
     sleep(1)
 `,
       },
+      {
+        name: 'every',
+        sig: 'every(n, offset=0)',
+        blurb:
+          'True when this beat lands on the n-beat grid \u2014 "sometimes", without a ' +
+          'counter to advance or state to fall out of step after a hot swap. It tests ' +
+          'the grid, so n wants to be a multiple of the loop\u2019s own sleep.',
+        code: `@live_loop("a")
+def a():
+    sample("hat", amp=0.3)
+    if every(4):                  # once a bar, on the downbeat
+        sample("clap", amp=0.5)
+    sleep(0.25)
+`,
+      },
+      {
+        name: 'beat',
+        sig: 'beat()',
+        blurb:
+          'This thread\u2019s position in beats. The clock every() is written in terms ' +
+          'of, for the cases every() does not cover.',
+        code: `@live_loop("a")
+def a():
+    use_synth("pluck")
+    # rises through the first half of each bar of 8, rests in the second
+    if beat() % 8 < 4:
+        play(60 + beat() % 8 * 2, release=0.4, amp=0.4)
+    sleep(0.5)
+`,
+      },
     ],
   },
 
