@@ -215,7 +215,7 @@ export class Visuals {
         ctx.save();
         if (seg > 1) ctx.rotate((k * TAU) / seg);
         if (st.flip && (k & 1)) ctx.scale(-1, 1);
-        this.#draw(sh, px, py, rr, rot, dsz);
+        this.#draw(sh, px, py, rr, rot, dsz, sh.vx * u, sh.vy * u);
         ctx.restore();
       }
     }
@@ -225,7 +225,7 @@ export class Visuals {
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  #draw(sh, px, py, rr, rot, dsz) {
+  #draw(sh, px, py, rr, rot, dsz, dx, dy) {
     const ctx = this.ctx;
     ctx.beginPath();
     switch (sh.shape) {
@@ -250,14 +250,25 @@ export class Visuals {
         break;
       }
       case 'line':
+        // BOTH ends drift: vx/vy move the whole shape, they do not stretch it
         ctx.moveTo(px, py);
-        ctx.lineTo(sh.x2, sh.y2);
+        ctx.lineTo(sh.x2 + dx, sh.y2 + dy);
         ctx.stroke();
-        return;                              // lines are never filled
-      case 'arc':
-        ctx.arc(px, py, rr, sh.a0 * TAU, sh.a1 * TAU);
-        ctx.stroke();
+        return;                              // a line has nothing to fill
+      case 'arc': {
+        ctx.translate(px, py);
+        ctx.rotate(rot);                     // arc ignored rot and spin entirely
+        if (sh.fill) {
+          ctx.moveTo(0, 0);                  // a filled arc is a pie wedge
+          ctx.arc(0, 0, rr, sh.a0 * TAU, sh.a1 * TAU);
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          ctx.arc(0, 0, rr, sh.a0 * TAU, sh.a1 * TAU);
+          ctx.stroke();
+        }
         return;
+      }
       default:
         ctx.arc(px, py, rr, 0, TAU);
     }

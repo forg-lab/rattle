@@ -239,6 +239,20 @@ lands *on* the kick rather than near it.
 Shapes: `circle` `rect` `poly` `line` `arc`. Not `square` or `triangle` — those
 names belong to signals, hence `rect` and `poly(n=…)`.
 
+They take the same vocabulary wherever it can mean anything:
+
+| | position | size | rotation | |
+|---|---|---|---|---|
+| `circle` | `x` `y` | `r` | — | |
+| `poly` | `x` `y` | `r` | `rot` `spin` | `n` sides |
+| `rect` | `x` `y` | `r`, or `w`/`h` | `rot` `spin` | |
+| `arc` | `x` `y` | `r` | `rot` `spin` | `a0` `a1` in turns; `fill=1` makes a wedge |
+| `line` | `x` `y` | `width` | — | `x2` `y2` for the far end |
+
+`vx`, `vy` and `vr` move each of those over the shape's life, so one event
+keeps changing after the beat that made it. A line translates whole — both ends
+drift together.
+
 | option | | |
 |---|---|---|
 | `life` | 1 | how long it lives, **in beats** |
