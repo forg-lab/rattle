@@ -244,11 +244,21 @@ matching velocity — how much it changes over the life:
 
 | | position | size | rotation | own to it |
 |---|---|---|---|---|
-| `circle` | `x` `y` | `r` → `vr` | — | |
-| `poly` | `x` `y` | `r` → `vr` | `rot` `spin` | `n` sides |
+| `circle` | `x` `y` | `rx` `ry` → `vrx` `vry` | `rot` `spin` | |
+| `poly` | `x` `y` | `rx` `ry` → `vrx` `vry` | `rot` `spin` | `n` sides |
 | `rect` | `x` `y` | `w` `h` → `vw` `vh` | `rot` `spin` | |
-| `arc` | `x` `y` | `r` → `vr` | `rot` `spin` | `a0` `a1` in turns; `fill=1` makes a wedge |
+| `arc` | `x` `y` | `rx` `ry` → `vrx` `vry` | `rot` `spin` | `a0` `a1` in turns; `fill=1` makes a wedge |
 | `line` | `x` `y` | `width` | — | `x2` `y2` → `vx2` `vy2` |
+
+On the round shapes `r` is the shorthand that sets both radii and `vr` both
+velocities, which is what you want nearly always. Give `rx` and `ry` separately
+for an ellipse, a squashed polygon or an elliptical arc:
+
+```python
+circle(rx=0.5, ry=0.12)              # an ellipse
+poly(n=6, rx=0.4, ry=0.15)           # a flattened hexagon
+circle(r=0.1, vrx=0.6)               # opens out sideways as it fades
+```
 
 `vx` and `vy` move the *whole* shape, whatever it is — a line translates with
 both ends together. Everything else changes that shape's own geometry, so a

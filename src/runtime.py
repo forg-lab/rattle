@@ -612,10 +612,21 @@ def _shape(name, kw, loc):
     _emit('viz', kw, loc)
 
 
-def circle(x=0.0, y=0.0, r=0.15, _loc=None, **kw):
+def _radii(kw, r, rx, ry, vr=None):
+    # r is the shorthand that sets both radii, exactly as it always has; rx and
+    # ry override it one axis at a time. Same shape of idea as rect's w and h.
+    kw['rx'] = r if rx is None else rx
+    kw['ry'] = r if ry is None else ry
+    if 'vr' in kw:
+        v = kw.pop('vr')
+        kw.setdefault('vrx', v)
+        kw.setdefault('vry', v)
+
+
+def circle(x=0.0, y=0.0, r=0.15, rx=None, ry=None, _loc=None, **kw):
     kw['x'] = x
     kw['y'] = y
-    kw['r'] = r
+    _radii(kw, r, rx, ry)
     _shape('circle', kw, _loc)
 
 
@@ -630,11 +641,11 @@ def rect(x=0.0, y=0.0, w=0.3, h=0.3, _loc=None, **kw):
     _shape('rect', kw, _loc)
 
 
-def poly(n=3, x=0.0, y=0.0, r=0.15, _loc=None, **kw):
+def poly(n=3, x=0.0, y=0.0, r=0.15, rx=None, ry=None, _loc=None, **kw):
     kw['n'] = n
     kw['x'] = x
     kw['y'] = y
-    kw['r'] = r
+    _radii(kw, r, rx, ry)
     _shape('poly', kw, _loc)
 
 
@@ -646,12 +657,12 @@ def line(x=0.0, y=0.0, x2=0.0, y2=0.0, _loc=None, **kw):
     _shape('line', kw, _loc)
 
 
-def arc(x=0.0, y=0.0, r=0.2, a0=0.0, a1=0.5, _loc=None, **kw):
+def arc(x=0.0, y=0.0, r=0.2, a0=0.0, a1=0.5, rx=None, ry=None, _loc=None, **kw):
     kw['x'] = x
     kw['y'] = y
-    kw['r'] = r
     kw['a0'] = a0
     kw['a1'] = a1
+    _radii(kw, r, rx, ry)
     _shape('arc', kw, _loc)
 
 

@@ -72,11 +72,13 @@ export class Visuals {
       shape: p.shape || 'circle',
       x: num(p.x, 0), y: num(p.y, 0),
       x2: num(p.x2, 0), y2: num(p.y2, 0),
-      r: num(p.r, 0.15), w: num(p.w, 0.3), h: num(p.h, 0.3),
+      rx: num(p.rx, num(p.r, 0.15)), ry: num(p.ry, num(p.r, 0.15)),
+      w: num(p.w, 0.3), h: num(p.h, 0.3),
       n: Math.max(3, Math.round(num(p.n, 3))),
       a0: num(p.a0, 0), a1: num(p.a1, 0.5),
       rot: num(p.rot, 0) * TAU,
-      vr: num(p.vr, 0), vw: num(p.vw, 0), vh: num(p.vh, 0),
+      vrx: num(p.vrx, num(p.vr, 0)), vry: num(p.vry, num(p.vr, 0)),
+      vw: num(p.vw, 0), vh: num(p.vh, 0),
       vx2: num(p.vx2, 0), vy2: num(p.vy2, 0),
       spin: num(p.spin, 0),
       vx: num(p.vx, 0), vy: num(p.vy, 0),
@@ -200,8 +202,10 @@ export class Visuals {
       // for position. A negative vr shrinks straight through zero - the canvas
       // API throws IndexSizeError on a negative radius, so nothing is as small
       // as this gets. Also catches a NaN out of signal arithmetic.
-      let rr = sh.r + sh.vr * u;
-      if (!(rr > 0)) rr = 0;
+      let rx = sh.rx + sh.vrx * u;
+      let ry = sh.ry + sh.vry * u;
+      if (!(rx > 0)) rx = 0;
+      if (!(ry > 0)) ry = 0;
       const px = sh.x + sh.vx * u;
       const py = sh.y + sh.vy * u;
       if (!Number.isFinite(px) || !Number.isFinite(py)) continue;
@@ -216,7 +220,7 @@ export class Visuals {
         ctx.save();
         if (seg > 1) ctx.rotate((k * TAU) / seg);
         if (st.flip && (k & 1)) ctx.scale(-1, 1);
-        this.#draw(sh, px, py, rr, rot, u, sh.vx * u, sh.vy * u);
+        this.#draw(sh, px, py, rx, ry, rot, u, sh.vx * u, sh.vy * u);
         ctx.restore();
       }
     }
@@ -226,7 +230,7 @@ export class Visuals {
     ctx.globalCompositeOperation = 'source-over';
   }
 
-  #draw(sh, px, py, rr, rot, u, dx, dy) {
+  #draw(sh, px, py, rx, ry, rot, u, dx, dy) {
     const ctx = this.ctx;
     ctx.beginPath();
     switch (sh.shape) {
@@ -243,8 +247,8 @@ export class Visuals {
         ctx.rotate(rot);
         for (let j = 0; j < sh.n; j++) {
           const ang = (j / sh.n) * TAU;
-          const vx = Math.cos(ang) * rr;
-          const vy = Math.sin(ang) * rr;
+          const vx = Math.cos(ang) * rx;
+          const vy = Math.sin(ang) * ry;
           if (j === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
         }
         ctx.closePath();
@@ -262,17 +266,19 @@ export class Visuals {
         ctx.rotate(rot);                     // arc ignored rot and spin entirely
         if (sh.fill) {
           ctx.moveTo(0, 0);                  // a filled arc is a pie wedge
-          ctx.arc(0, 0, rr, sh.a0 * TAU, sh.a1 * TAU);
+          ctx.ellipse(0, 0, rx, ry, 0, sh.a0 * TAU, sh.a1 * TAU);
           ctx.closePath();
           ctx.fill();
         } else {
-          ctx.arc(0, 0, rr, sh.a0 * TAU, sh.a1 * TAU);
+          ctx.ellipse(0, 0, rx, ry, 0, sh.a0 * TAU, sh.a1 * TAU);
           ctx.stroke();
         }
         return;
       }
       default:
-        ctx.arc(px, py, rr, 0, TAU);
+        // ellipse, not arc: rx and ry may differ, and rot turns it - which
+        // only shows once they do
+        ctx.ellipse(px, py, rx, ry, rot, 0, TAU);
     }
     if (sh.fill) ctx.fill(); else ctx.stroke();
   }
