@@ -22,7 +22,7 @@ def drums():
     sample("bd", amp=1.1)
     # a shockwave off the floor
     circle(y=-0.9, r=0.05, vy=0.35, hue=0.06, life=1.1,
-           grow=7, fill=0, width=0.012, alpha=0.8)
+           vr=0.3, fill=0, width=0.012, alpha=0.8)
     sleep(0.5)
 
     sample("hat", amp=0.3)

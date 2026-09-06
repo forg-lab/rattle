@@ -366,23 +366,23 @@ def a():
         sig: 'circle(x=0, y=0, r=0.15, **opts)',
         blurb:
           'The envelope is the whole trick: one event per beat, sixty smooth ' +
-          'frames. `grow` scales the radius across its life, `life` is in beats.',
+          'frames. `vr` changes its size across that life, `life` is in beats.',
         code: `use_bpm(100)
 
 @live_loop("v")
 def v():
     trails(0.9)
-    circle(r=0.05, hue=0.5, life=2, grow=8, fill=0, width=0.01)
+    circle(r=0.05, hue=0.5, life=2, vr=0.35, fill=0, width=0.01)
     sleep(1)
 `,
       },
       {
         name: 'motion',
-        sig: 'vx · vy · spin · grow',
+        sig: 'vx · vy · vr · spin',
         blurb:
-          'x and y are where a shape STARTS. vx and vy are how far it travels ' +
-          'over its whole life, so one event keeps moving long after the beat ' +
-          'that spawned it. spin turns it, grow scales it.',
+          'x, y and r are where a shape STARTS. vx, vy and vr are how far each ' +
+          'travels over its whole life, so one event keeps changing long after ' +
+          'the beat that spawned it. spin turns it.',
         code: `use_bpm(100)
 
 @live_loop("v")
@@ -428,7 +428,7 @@ def v():
     i = choose([0, 1, 2, 3, 4])
     play(notes[i], release=0.3, amp=0.4)
     circle(x=-0.8 + i * 0.4, y=0, r=0.06,
-           hue=0.1 + i * 0.12, life=1, grow=3)
+           hue=0.1 + i * 0.12, life=1, vr=0.12)
     sleep(0.5)
 `,
       },
@@ -497,7 +497,7 @@ def v():
     bg(hue=saw(8, 0, 1), sat=0.7, val=0.12)
     trails(0)
     sample("bd")
-    circle(r=0.3, hue=0.1, val=1, life=1, grow=2, fill=0, width=0.02)
+    circle(r=0.3, hue=0.1, val=1, life=1, vr=0.3, fill=0, width=0.02)
     sleep(1)
 `,
       },

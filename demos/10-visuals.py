@@ -24,13 +24,13 @@ def look():
 def drums():
     sample("bd", amp=1.1)
     # a ring, not a disc: filled shapes under an additive mirror wash out
-    circle(y=-0.5, r=0.08, hue=0.08, life=1.2, grow=6,
+    circle(y=-0.5, r=0.08, hue=0.08, life=1.2, vr=0.4,
            fill=0, width=0.012, alpha=0.9)
     sleep(0.5)
     sample("hat", amp=0.35)
     # x/y are only the start: vy carries it on drifting after the beat
     circle(x=rrand(-0.9, 0.9), y=-0.2, vy=1.1,
-           r=0.012, hue=0.5, life=2.5, grow=1.5, alpha=0.7)
+           r=0.012, hue=0.5, life=2.5, vr=0.006, alpha=0.7)
     sleep(0.5)
 
 @live_loop("bass", sync="look")
@@ -41,7 +41,7 @@ def bass():
     play(notes[i], release=0.22, amp=0.5, cutoff=saw(8, 55, 105))
     # the same choice drives the note and the shape, so they cannot disagree
     poly(n=3, x=-0.6 + i * 0.25, y=0.15, r=0.07,
-         hue=0.45 + i * 0.05, life=1.5, spin=0.5, grow=1.6,
+         hue=0.45 + i * 0.05, life=1.5, spin=0.5, vr=0.042,
          fill=0, width=0.006, alpha=0.8)
     sleep(0.25)
 

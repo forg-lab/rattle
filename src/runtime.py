@@ -39,6 +39,7 @@ def _prime(now):
 
 def _reset():
     global _CUR, _EV
+    _WARNED_GROW[0] = False
     _SLIDERS.clear()
     _SLIDER_AUTO.clear()
     _TASKS.clear()
@@ -601,8 +602,23 @@ def _spb():
     return 60.0 / (_CUR.bpm if _CUR is not None else 60.0)
 
 
+_WARNED_GROW = [False]
+
+
 def _shape(name, kw, loc):
     kw['shape'] = name
+    # `grow` was a multiplier: the radius ended at r * grow. vr is a total
+    # change, like vx and vy, so the same effect is r * (grow - 1). Translated
+    # rather than ignored, because a silently dead keyword is worse than a
+    # rename.
+    if 'grow' in kw:
+        g = _val(kw.pop('grow'))
+        r0 = _val(kw.get('r', kw.get('w', 0.15)))
+        kw['vr'] = r0 * (g - 1)
+        if not _WARNED_GROW[0]:
+            _WARNED_GROW[0] = True
+            _LOG.append('L|grow= is now vr=, and adds rather than multiplies: '
+                        'grow=%s on r=%s is vr=%s' % (g, r0, round(r0 * (g - 1), 4)))
     # life is in BEATS, like sleep(). Converted here, where this thread's
     # tempo is known, so the renderer never needs to hear about bpm.
     kw['life'] = _val(kw['life']) * _spb() if 'life' in kw else _spb()

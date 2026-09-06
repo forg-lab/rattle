@@ -223,7 +223,7 @@ def viz():
     glow(1)                         # additive blending
     mirror(6)                       # kaleidoscope wedges, 1 = off
     circle(x=sine(4, -1, 1), r=0.06,
-           hue=saw(8, 0, 1), life=2, grow=4)
+           hue=saw(8, 0, 1), life=2, vr=0.18)
     sleep(0.25)
 ```
 
@@ -243,14 +243,15 @@ names belong to signals, hence `rect` and `poly(n=…)`.
 |---|---|---|
 | `life` | 1 | how long it lives, **in beats** |
 | `hue` `sat` `val` `alpha` | | colour, hue `0..1` |
-| `grow` | 1 | radius multiplier across its life; `4` quadruples, `0` shrinks to nothing. Negative shrinks *through* zero and stays there — nothing is smaller than a point |
+| `vr` | 0 | how much the size changes across its life, like `vx` for position. Negative shrinks *through* zero and stays a point |
 | `spin` | 0 | rotations across its life |
 | `vx` `vy` | 0 | total drift across its life, in world units |
 | `fill` `width` | 1, 0.006 | filled, or stroked at this width |
 | `atk` `curve` | 0.03, 1.6 | envelope: attack fraction, decay shape |
 
-`x` and `y` are only where a shape *starts*. `vx`/`vy` carry it on after the
-beat that spawned it, so a single event can cross the whole screen:
+`x`, `y` and `r` are only where a shape *starts*. `vx`, `vy` and `vr` are how
+far each travels before it fades, so a single event can cross the whole screen
+while growing:
 
 ```python
 circle(x=-1.7, vx=3.4, y=sine(4, -0.5, 0.5), r=0.06, life=8)

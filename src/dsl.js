@@ -90,7 +90,7 @@ export const FUNCS = {
   lift: { sig: 'lift(fn, *sources)', doc: 'Combine signals or constants with an ordinary function, for anything the operators do not cover: lift(lambda a, b: max(a, b), sine(4, 0, 1), saw(3, 0, 1)). Plain arithmetic needs no lift — signals support + - * / % ** and abs() in either order.' },
   log: { sig: 'log(*args)', doc: 'Print to the log pane.' },
 
-  circle: { sig: 'circle(x=0, y=0, r=0.15, **opts)', doc: 'Spawn a circle. Like a note, it has a lifetime: it grows and fades over `life` beats, which is what turns one event into smooth motion. grow scales the radius across that life — 4 quadruples, 0 shrinks to nothing, negative shrinks through zero and stays a point. x and y are only where it STARTS: vx and vy carry it across the screen, spin turns it.' },
+  circle: { sig: 'circle(x=0, y=0, r=0.15, **opts)', doc: 'Spawn a circle. Like a note, it has a lifetime: it grows and fades over `life` beats, which is what turns one event into smooth motion. x, y and r are only where it STARTS. vx, vy and vr are how far each travels over its life — vr grows or shrinks it, and a negative vr shrinks through zero to a point. spin turns it.' },
   rect: { sig: 'rect(x=0, y=0, w=0.3, h=0.3, **opts)', doc: 'Spawn a rectangle. Not `square` — that name is a signal.' },
   poly: { sig: 'poly(n=3, x=0, y=0, r=0.15, **opts)', doc: 'Spawn an n-sided polygon. n=3 a triangle, n=6 a hexagon, large n reads as a circle.' },
   line: { sig: 'line(x=0, y=0, x2=0, y2=0, **opts)', doc: 'Spawn a line between two points.' },
@@ -104,7 +104,7 @@ export const FUNCS = {
 // Options every drawing call accepts, on top of its own geometry.
 export const VIZ_ARGS = [
   'life', 'hue', 'sat', 'val', 'alpha',
-  'grow', 'spin', 'vx', 'vy', 'rot',
+  'vx', 'vy', 'vr', 'spin', 'rot',
   'atk', 'curve', 'fill', 'width',
 ];
 
