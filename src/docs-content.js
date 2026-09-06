@@ -19,9 +19,9 @@ export const SECTIONS = [
 
 @live_loop("a")
 def a():
-    play(72, release=0.3)
+    play(72, release=0.6)
     sleep(0.25)          # <- try 0.5, 1, 0.125
-    play(67, release=0.3)
+    play(67, release=0.6)
     sleep(0.75)
 `,
       },
@@ -426,7 +426,7 @@ def v():
 def v():
     notes = scale("c3", "minor_pentatonic")
     i = choose([0, 1, 2, 3, 4])
-    play(notes[i], release=0.3, amp=0.4)
+    play(notes[i], release=0.56, amp=0.4)
     circle(x=-0.8 + i * 0.4, y=0, r=0.06,
            hue=0.1 + i * 0.12, life=1, vr=0.12)
     sleep(0.5)

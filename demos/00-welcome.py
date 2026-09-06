@@ -25,12 +25,12 @@ def drums():
 def bass():
     use_synth("saw")
     notes = scale("e1", "minor_pentatonic")
-    play(notes[choose([0, 0, 2, 3, 5])], release=0.22,
+    play(notes[choose([0, 0, 2, 3, 5])], release=0.375,
          cutoff=slider(74, 50, 110, label="cutoff"))
     sleep(0.25)
 
 @live_loop("pad", sync="drums")
 def pad():
     use_synth("fm")
-    play(chord("e3", "minor7"), amp=0.35, attack=0.6, release=2.4, room=0.5)
+    play(chord("e3", "minor7"), amp=0.35, attack=1, release=4, room=0.5)
     sleep(4)

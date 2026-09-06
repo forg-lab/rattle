@@ -36,11 +36,11 @@ def pulse():
 @live_loop("pad", sync="look")
 def pad():
     use_synth("sine")
-    play(chord("a3", "minor7"), amp=0.13, attack=1.2, release=3, room=0.8)
+    play(chord("a3", "minor7"), amp=0.13, attack=1.92, release=4.8, room=0.8)
     sleep(4)
 
 @live_loop("melody", sync="look")
 def melody():
     use_synth("pluck")
-    play(seq([76, 83, 79, 74], 2) , amp=0.22, release=1.2, room=0.6)
+    play(seq([76, 83, 79, 74], 2) , amp=0.22, release=1.92, room=0.6)
     sleep(2)

@@ -12,9 +12,9 @@ def beat():
 
 @live_loop("melody", sync="beat")
 def melody():
-    play("c4", release=0.4)
+    play("c4", release=0.625)
     sleep(0.5)
-    play("e4", release=0.4)
+    play("e4", release=0.625)
     sleep(0.5)
-    play("g4", release=0.4)
+    play("g4", release=0.625)
     sleep(1)

@@ -17,12 +17,12 @@ progression = [
 def arp():
     use_synth("pluck")
     for i in range(8):
-        play(notes[i], release=0.3, amp=0.45)
+        play(notes[i], release=0.5, amp=0.45)
         sleep(0.25)
 
 @live_loop("harmony", sync="arp")
 def harmony():
     use_synth("tri")
     for c in progression:
-        play(c, amp=0.22, attack=0.4, release=1.8, room=0.5)
+        play(c, amp=0.22, attack=0.67, release=3, room=0.5)
         sleep(2)

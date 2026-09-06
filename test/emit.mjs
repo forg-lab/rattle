@@ -180,6 +180,32 @@ ok(rawS('slider(sine(8,-1,1), -0.5, 0.5)') === '-0.5..0.5',
 ok(rawS('slider(0.5)') === '0.0..1.0',
    'a plain number still defaults to 0..1', String(rawS('slider(0.5)')));
 
+// --------------------------------------------- envelope times are in beats
+// Same rule as sleep() and a shape's life: a passage keeps its shape when you
+// change the tempo. The defaults matter as much as the explicit values - if
+// only the values you name were tempo-relative, the engine's own fallback
+// would be the one part of the envelope that ignored the bpm.
+const firstSynth = (bpm, args) => {
+  const rr = run(`use_bpm(${bpm})\n@live_loop("v")\ndef v():\n    play(60${args})\n    sleep(1)\n`);
+  const e = rr.find(x => x.kind === 'synth');
+  return e ? e.kv : {};
+};
+const halves = (args, keys, label) => {
+  const a = firstSynth(60, args), b = firstSynth(120, args);
+  const got = keys.every(k => a[k] !== undefined && b[k] !== undefined
+                          && Math.abs(parseFloat(a[k]) - parseFloat(b[k]) * 2) < 1e-9);
+  ok(got, label, keys.map(k => `${k} ${a[k]}\u2192${b[k]}`).join(' '));
+};
+halves(', release=0.5', ['release'], 'release halves when the tempo doubles');
+halves(', attack=0.25', ['attack'], 'attack halves when the tempo doubles');
+halves(', decay=0.5, sustain=0.25', ['decay', 'sustain'], 'decay and sustain scale too');
+halves('', ['attack', 'release'], 'the DEFAULT envelope is tempo-relative as well');
+
+// a signal must survive the conversion rather than reaching the wire unscaled
+const sig = firstSynth(120, ', release=hold(0.5)');
+ok(Math.abs(parseFloat(sig.release) - 0.25) < 1e-9,
+   'a signal on an envelope time is converted like a number', `release=${sig.release}`);
+
 // ------------------------------------------- the shape vocabulary on the wire
 // r is shorthand for both radii and vr for both velocities; rx/ry and vrx/vry
 // override one axis each. That fan-out happens in Python, so the renderer never

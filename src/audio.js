@@ -107,6 +107,9 @@ export class Engine {
     const amp = Math.max(0, num(p.amp, 1));
     if (amp <= 0) return;   // a silent note is silence, not an exception
     const freq = hz(mtof(num(p.note, 60)), ctx);
+    // Already seconds: runtime.py converts these from beats using the calling
+    // thread's tempo, the same way it converts a shape's life. The fallbacks
+    // here are only for an event that arrived without them.
     const atk = Math.max(0, num(p.attack, 0.01));
     const dec = Math.max(0, num(p.decay, 0));
     const sus = Math.max(0, num(p.sustain, 0));

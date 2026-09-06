@@ -30,7 +30,7 @@ def bars():
     use_synth("pulse")
     notes = scale("d2", "minor_pentatonic")
     i = choose([0, 0, 2, 3, 5])
-    play(notes[i], release=0.12, amp=0.4, cutoff=92)
+    play(notes[i], release=0.25, amp=0.4, cutoff=92)
     # the same index picks the pitch and the bar, so they cannot disagree
     rect(x=-0.8 + i * 0.32, y=0, w=0.14, h=rrand(0.25, 1.3),
          hue=0.06 + i * 0.05, val=1, life=0.28)
@@ -40,6 +40,6 @@ def bars():
 def stab():
     sleep(2)
     use_synth("square")
-    play(chord("d4", "minor"), amp=0.18, release=0.3, cutoff=100)
+    play(chord("d4", "minor"), amp=0.18, release=0.625, cutoff=100)
     poly(n=4, r=0.5, hue=0.12, val=1, life=0.4, fill=0, width=0.02, spin=0.12)
     sleep(2)

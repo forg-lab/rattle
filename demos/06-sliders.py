@@ -22,6 +22,6 @@ def bass():
     notes = scale("e1", "minor_pentatonic")
     play(notes[choose([0, 0, 2, 3, 5])],
          amp=0.5,
-         release=slider(0.22, 0.05, 1.2, label="length"),
+         release=slider(0.375, 0.1, 2, label="length"),
          cutoff=slider(saw(8, 50, 110), 50, 110, label="cut"))
     sleep(0.25)

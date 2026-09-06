@@ -562,6 +562,22 @@ def _emit(kind, params, loc):
     _EV.append((_CUR.t, kind, loc, out))
 
 
+# Envelope times are in BEATS, like sleep() and a shape's life. Converted here,
+# where this thread's tempo is known, so the audio engine never needs to hear
+# about bpm - the same arrangement _shape() uses for life.
+#
+# attack and release are always sent, defaults included, or the engine's own
+# fallbacks would be the one part of the envelope that ignored the tempo.
+# decay and sustain default to 0, and 0 beats is 0 seconds either way.
+def _envelope(kw):
+    spb = _spb()
+    kw['attack'] = _val(kw['attack']) * spb if 'attack' in kw else 0.01 * spb
+    kw['release'] = _val(kw['release']) * spb if 'release' in kw else 0.5 * spb
+    for k in ('decay', 'sustain'):
+        if k in kw:
+            kw[k] = _val(kw[k]) * spb
+
+
 def play(n=60, _loc=None, **kw):
     n = _val(n)
     if n is None:
@@ -577,6 +593,7 @@ def play(n=60, _loc=None, **kw):
     kw['note'] = n
     if 'synth' not in kw:
         kw['synth'] = _CUR.synth
+    _envelope(kw)
     _emit('synth', kw, _loc)
 
 

@@ -14,11 +14,11 @@ def tour():
     for name in ["sine", "tri", "saw", "square", "pulse", "fm", "pluck"]:
         use_synth(name)
         log(name)
-        play("a3", amp=0.4, release=0.8, cutoff=100, room=0.35)
+        play("a3", amp=0.4, release=1.17, cutoff=100, room=0.35)
         sleep(1)
 
 @live_loop("bed", sync="tour")
 def bed():
     use_synth("sine")
-    play(chord("a2", "minor"), amp=0.14, attack=1.5, release=3, room=0.8)
+    play(chord("a2", "minor"), amp=0.14, attack=2.2, release=4.4, room=0.8)
     sleep(4)

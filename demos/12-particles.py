@@ -46,5 +46,5 @@ def snare():
 def bass():
     use_synth("saw")
     notes = scale("a1", "minor_pentatonic")
-    play(choose(notes), release=0.2, amp=0.45, cutoff=rrand(60, 100))
+    play(choose(notes), release=0.42, amp=0.45, cutoff=rrand(60, 100))
     sleep(0.25)

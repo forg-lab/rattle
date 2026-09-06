@@ -90,10 +90,10 @@ play(chord("e3", "minor7"))          # all three notes at once
 |---|---|---|
 | `amp` | 1 | volume; `0` is silence, not an error |
 | `pan` | 0 | −1 left, 1 right |
-| `attack` | 0.01 | fade-in, beats |
-| `decay` | 0 | fall to sustain level |
-| `sustain` | 0 | hold |
-| `release` | 0.5 | fade-out |
+| `attack` | 0.01 | fade-in, in beats |
+| `decay` | 0 | fall from the peak to the sustain level, in beats |
+| `sustain` | 0 | how long to hold there, in beats — a time, not a level |
+| `release` | 0.5 | fade-out, in beats |
 | `cutoff` | — | low-pass, as a MIDI note number (so 100 is bright) |
 | `res` | 0.3 | filter resonance |
 | `room` | 0 | reverb send, 0–1 |

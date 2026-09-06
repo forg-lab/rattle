@@ -27,7 +27,7 @@ melody = [notes[i] + 24 for i in range(0, 10, 2)]
 def lead():
     use_synth("pluck")
     for n in melody:
-        play(n, release=0.35, amp=0.32)
+        play(n, release=0.65, amp=0.32)
         sleep(0.25)
     sleep(0.75)
 

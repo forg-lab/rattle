@@ -19,5 +19,5 @@ def three():
 @live_loop("five", sync="four")
 def five():
     use_synth("tri")
-    play(seq([64, 71, 76], 1.25), amp=0.2, release=0.5, pan=0.4)
+    play(seq([64, 71, 76], 1.25), amp=0.2, release=1.1, pan=0.4)
     sleep(1.25)

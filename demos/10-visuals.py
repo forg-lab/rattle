@@ -38,7 +38,7 @@ def bass():
     use_synth("saw")
     notes = scale("e1", "minor_pentatonic")
     i = choose([0, 0, 2, 3, 5])
-    play(notes[i], release=0.22, amp=0.5, cutoff=saw(8, 55, 105))
+    play(notes[i], release=0.41, amp=0.5, cutoff=saw(8, 55, 105))
     # the same choice drives the note and the shape, so they cannot disagree
     poly(n=3, x=-0.6 + i * 0.25, y=0.15, r=0.07,
          hue=0.45 + i * 0.05, life=1.5, spin=0.5, vr=0.042,
@@ -48,7 +48,7 @@ def bass():
 @live_loop("pad", sync="look")
 def pad():
     use_synth("fm")
-    play(chord("e3", "minor7"), amp=0.3, attack=0.6, release=2.4, room=0.5)
+    play(chord("e3", "minor7"), amp=0.3, attack=1.12, release=4.48, room=0.5)
     arc(r=0.8, a0=0, a1=sine(8, 0.15, 0.85),
         hue=0.72, life=4, spin=0.25, width=0.006, alpha=0.55)
     sleep(4)

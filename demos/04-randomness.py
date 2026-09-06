@@ -31,5 +31,5 @@ def riff():
     use_synth("saw")
     notes = scale("d2", "minor_pentatonic")
     for i in range(8):
-        play(choose(notes), release=0.18, amp=0.45, cutoff=rrand(60, 95))
+        play(choose(notes), release=0.36, amp=0.45, cutoff=rrand(60, 95))
         sleep(0.25)

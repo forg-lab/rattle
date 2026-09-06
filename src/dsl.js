@@ -51,7 +51,7 @@ export const CHORDS = [
 export const FUNCS = {
   play: {
     sig: 'play(note, amp=1, pan=0, attack=0.01, decay=0, sustain=0, release=0.5, cutoff=None, res=0.3, room=0)',
-    doc: 'Play a note on the current synth. Accepts a MIDI number (60), a note name ("e3"), or a list for a chord. amp=0 is silence, not an error.',
+    doc: 'Play a note on the current synth. Accepts a MIDI number (60), a note name ("e3"), or a list for a chord. Envelope times are in beats, like sleep, so a passage keeps its shape at any tempo. amp=0 is silence, not an error.',
   },
   sample: {
     sig: 'sample(name, amp=1, pan=0, rate=1, cutoff=None, room=0)',
@@ -121,10 +121,10 @@ export const PARAM_DOCS = {
   // --- sound
   amp: ['Volume. 0 is silence, not an error.', '1'],
   pan: ['Stereo position: -1 hard left, 0 centre, 1 hard right.', '0'],
-  attack: ['Fade-in time, in seconds.', '0.01'],
-  decay: ['Time to fall from the peak to the sustain level, in seconds.', '0'],
-  sustain: ['Level held after the decay, 0..1.', '0'],
-  release: ['Fade-out time after the sustain, in seconds.', '0.5'],
+  attack: ['Fade-in time, in beats.', '0.01'],
+  decay: ['Time to fall from the peak to the sustain level, in beats.', '0'],
+  sustain: ['How long to hold at the sustain level, in beats. A time, not a level - the level is fixed.', '0'],
+  release: ['Fade-out time after the sustain, in beats.', '0.5'],
   cutoff: ['Low-pass filter, as a MIDI note number - so 100 is bright, 50 is dark.', 'off'],
   res: ['Filter resonance. Higher rings more at the cutoff.', '0.3'],
   room: ['Reverb send, 0..1.', '0'],
