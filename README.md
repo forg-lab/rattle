@@ -35,6 +35,9 @@ language.
 | `08-synths-and-effects` | every synth, envelopes, filter, reverb |
 | `09-python-loops` | `for`, `while` and comprehensions as composition |
 | `10-visuals` | generative animation behind the code, on the same clock |
+| `11-orbits` | line art from signal arithmetic and a very long trail |
+| `12-particles` | sparks that keep moving after the beat that threw them |
+| `13-strobe` | the opposite: hard clears, flat colour, everything on the grid |
 
 The full language reference is [DOCS.md](DOCS.md).
 

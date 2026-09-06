@@ -191,3 +191,49 @@ body.perform #viz { opacity: 1; }
   cursor: pointer;
 }
 body.viz-on #viz-toggle { color: var(--accent); border-color: #2f5d51; }
+
+/* --------------------------------------------------------------- log pane */
+
+.pane-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+#log-toggle {
+  font: 13px/1 var(--mono);
+  color: var(--dim);
+  background: none;
+  border: none;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+  transition: transform .18s ease, color .18s ease;
+}
+#log-toggle:hover { color: var(--accent); background: #262b34; }
+
+/* Minimised: a narrow strip that still says what it is, so it can be found
+   again. Collapsed by width rather than display:none, which would make the
+   editor reflow on every toggle. */
+body.log-min aside {
+  width: 34px;
+  overflow: hidden;
+}
+body.log-min #log { display: none; }
+body.log-min .pane-title {
+  flex-direction: column-reverse;
+  justify-content: flex-start;
+  height: 100%;
+  padding: 8px 0;
+  border-bottom: none;
+  gap: 10px;
+}
+body.log-min .pane-name {
+  writing-mode: vertical-rl;
+  letter-spacing: .14em;
+}
+body.log-min #log-toggle { transform: rotate(180deg); }
+
+/* the unread dot: something arrived while the pane was shut */
+body.log-min aside.has-unread .pane-name { color: var(--accent); }

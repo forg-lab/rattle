@@ -68,6 +68,7 @@ const view = new EditorView({
         { key: 'Mod-Enter', preventDefault: true, run: () => (run(), true) },
         { key: 'Mod-.', preventDefault: true, run: () => (stop(), true) },
         { key: 'Mod-Shift-v', preventDefault: true, run: () => (setViz(!vizOn), true) },
+        { key: 'Mod-Shift-l', preventDefault: true, run: () => (setLogMin(!logIsMin()), true) },
         { key: 'Mod-\\', preventDefault: true, run: () => (togglePerform(), true) },
         // CodeMirror leaves Tab unbound on purpose (it moves focus, for
         // keyboard accessibility). In a Python editor that makes indentation
@@ -136,6 +137,10 @@ function say(text, cls = '') {
   logEl.append(d);
   while (logEl.childElementCount > 300) logEl.firstElementChild.remove();
   logEl.scrollTop = logEl.scrollHeight;
+  // an error arriving behind a shut pane would otherwise vanish silently
+  if (document.body.classList.contains('log-min') && cls === 'err') {
+    aside.classList.add('has-unread');
+  }
 }
 
 function markError(line) {
@@ -455,6 +460,20 @@ function stop() {
 
 document.getElementById('run').onclick = run;
 document.getElementById('stop').onclick = stop;
+
+const aside = document.querySelector('aside');
+const logBtn = document.getElementById('log-toggle');
+
+function setLogMin(min) {
+  document.body.classList.toggle('log-min', min);
+  logBtn.title = (min ? 'show' : 'minimise') + ' the log (\u2318\u21e7L)';
+  if (!min) aside.classList.remove('has-unread');
+  try { localStorage.setItem('rattle:log-min', min ? '1' : '0'); } catch (_) { /* private mode */ }
+}
+
+const logIsMin = () => document.body.classList.contains('log-min');
+logBtn.onclick = () => setLogMin(!logIsMin());
+try { if (localStorage.getItem('rattle:log-min') === '1') setLogMin(true); } catch (_) { /* private mode */ }
 
 const vizBtn = document.getElementById('viz-toggle');
 const vizOpacity = document.getElementById('viz-opacity');
