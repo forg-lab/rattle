@@ -29,7 +29,10 @@ const coi = {
 export default defineConfig(({ command }) => ({
   base: command === 'build' ? '/rattle/' : '/',
   plugins: [coi],
-  server: { port: 5273 },
+  // host:true binds every interface rather than just ::1, so localhost resolves
+  // over IPv4 too - and a real phone on the same network can reach it, which
+  // matters now there is a mobile layout to test.
+  server: { port: 5273, host: true },
   worker: { format: 'es' },
   build: {
     rollupOptions: {
