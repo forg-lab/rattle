@@ -377,6 +377,27 @@ def v():
 `,
       },
       {
+        name: 'motion',
+        sig: 'vx · vy · spin · grow',
+        blurb:
+          'x and y are where a shape STARTS. vx and vy are how far it travels ' +
+          'over its whole life, so one event keeps moving long after the beat ' +
+          'that spawned it. spin turns it, grow scales it.',
+        code: `use_bpm(100)
+
+@live_loop("v")
+def v():
+    trails(0.92)
+    # enters at the left edge and crosses the screen over 8 beats
+    circle(x=-1.7, vx=3.4, y=sine(4, -0.5, 0.5),
+           r=0.06, hue=saw(8, 0, 1), life=8, fill=0, width=0.01)
+    # and one drifting upward, spinning as it goes
+    poly(n=3, x=rrand(-0.8, 0.8), y=-1.1, vy=2.2,
+         r=0.05, hue=0.5, life=6, spin=1, fill=0, width=0.008)
+    sleep(1)
+`,
+      },
+      {
         name: 'shapes',
         sig: 'rect · poly · line · arc',
         blurb:

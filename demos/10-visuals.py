@@ -28,8 +28,9 @@ def drums():
            fill=0, width=0.012, alpha=0.9)
     sleep(0.5)
     sample("hat", amp=0.35)
-    circle(x=rrand(-0.9, 0.9), y=rrand(-0.3, 0.7),
-           r=0.012, hue=0.5, life=0.6, grow=1.5, alpha=0.7)
+    # x/y are only the start: vy carries it on drifting after the beat
+    circle(x=rrand(-0.9, 0.9), y=-0.2, vy=1.1,
+           r=0.012, hue=0.5, life=2.5, grow=1.5, alpha=0.7)
     sleep(0.5)
 
 @live_loop("bass", sync="look")

@@ -240,9 +240,20 @@ names belong to signals, hence `rect` and `poly(n=…)`.
 | `hue` `sat` `val` `alpha` | | colour, hue `0..1` |
 | `grow` | 1 | radius multiplier across its life; `4` quadruples, `0` shrinks to nothing. Negative shrinks *through* zero and stays there — nothing is smaller than a point |
 | `spin` | 0 | rotations across its life |
-| `vx` `vy` | 0 | total drift across its life |
+| `vx` `vy` | 0 | total drift across its life, in world units |
 | `fill` `width` | 1, 0.006 | filled, or stroked at this width |
 | `atk` `curve` | 0.03, 1.6 | envelope: attack fraction, decay shape |
+
+`x` and `y` are only where a shape *starts*. `vx`/`vy` carry it on after the
+beat that spawned it, so a single event can cross the whole screen:
+
+```python
+circle(x=-1.7, vx=3.4, y=sine(4, -0.5, 0.5), r=0.06, life=8)
+```
+
+That is `vx` as *total* drift over the life, not a speed — so the distance
+travelled is the same whatever the tempo, and the shape always arrives exactly
+as it fades.
 
 Frame state, which persists until changed: `trails(amount)` `glow(on)`
 `mirror(n, flip)` `bg(hue, sat, val)`.
