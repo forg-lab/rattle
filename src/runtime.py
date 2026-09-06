@@ -448,8 +448,14 @@ class Signal:
     from note 60.
     """
 
-    def __init__(self, fn):
+    def __init__(self, fn, lo=None, hi=None):
         self.fn = fn
+        # The range this signal was declared over, where it is knowable. A
+        # slider given a signal and no range of its own uses this, so
+        # slider(sine(8, -1, 1)) shows the whole sweep rather than clipping at
+        # a default 0..1. Arithmetic drops it: nothing sensible to claim.
+        self.lo = lo
+        self.hi = hi
 
     def __call__(self, t):
         return self.fn(t)
@@ -492,37 +498,42 @@ class Signal:
 
 
 def saw(period=4.0, lo=0.0, hi=1.0):
-    return Signal(lambda t: lo + (hi - lo) * ((t % period) / period))
+    return Signal(lambda t: lo + (hi - lo) * ((t % period) / period), lo, hi)
 
 
 def isaw(period=4.0, lo=0.0, hi=1.0):
-    return Signal(lambda t: hi - (hi - lo) * ((t % period) / period))
+    return Signal(lambda t: hi - (hi - lo) * ((t % period) / period), lo, hi)
 
 
 def sine(period=4.0, lo=0.0, hi=1.0, phase=0.0):
     def f(t):
         a = (t / period + phase) * 2.0 * math.pi
         return lo + (hi - lo) * (0.5 + 0.5 * math.sin(a))
-    return Signal(f)
+    return Signal(f, lo, hi)
 
 
 def tri(period=4.0, lo=0.0, hi=1.0):
     def f(t):
         ph = (t % period) / period
         return lo + (hi - lo) * (2.0 * ph if ph < 0.5 else 2.0 * (1.0 - ph))
-    return Signal(f)
+    return Signal(f, lo, hi)
 
 
 def square(period=4.0, lo=0.0, hi=1.0, width=0.5):
-    return Signal(lambda t: hi if ((t % period) / period) < width else lo)
+    return Signal(lambda t: hi if ((t % period) / period) < width else lo, lo, hi)
 
 
 def seq(values, step=1.0):
     xs = values.xs if isinstance(values, Ring) else list(values)
-    return Signal(lambda t: xs[int(t / step) % len(xs)])
+    nums = [x for x in xs if isinstance(x, (int, float))]
+    lo = min(nums) if nums else None
+    hi = max(nums) if nums else None
+    return Signal(lambda t: xs[int(t / step) % len(xs)], lo, hi)
 
 
 def hold(value):
+    if isinstance(value, (int, float)):
+        return Signal(lambda t: value, value, value)
     return Signal(lambda t: value)
 
 
@@ -671,11 +682,23 @@ _SLIDERS = {}
 _SLIDER_AUTO = {}
 
 
-def slider(value=0.5, lo=0.0, hi=1.0, step=None, label=None, _loc=None):
+def slider(value=0.5, lo=None, hi=None, step=None, label=None, _loc=None):
     """A number you can grab. Hand it a function of time instead of a literal
     and it drives itself, overriding the hand value and moving to match."""
     key = ('%d:%d' % (_loc[0], _loc[1])) if _loc else 'anon'
     auto = callable(value)
+
+    # A signal knows the range it sweeps, so an automated slider does not need
+    # to be told one twice. Falls back to 0..1 for a bare number, or for a
+    # composed signal that can no longer say.
+    if lo is None:
+        lo = getattr(value, 'lo', None) if auto else None
+        if lo is None:
+            lo = 0.0
+    if hi is None:
+        hi = getattr(value, 'hi', None) if auto else None
+        if hi is None:
+            hi = 1.0
 
     if key not in _SLIDERS:
         cur = float(_val(value))

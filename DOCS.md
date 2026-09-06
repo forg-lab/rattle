@@ -197,7 +197,10 @@ source, so a value you dialled in by ear survives a re-run and can be committed
 like any other code.
 
 Hand it a **signal** instead and it drives itself: the thumb follows, in time
-with what you hear rather than the lookahead. You can still grab an automated
+with what you hear rather than the lookahead. You need not repeat the range —
+`slider(sine(8, -1, 1))` shows the whole sweep, because a signal knows the
+range it was declared over. A composed one (`sine(8, -1, 1) * 0.8`) cannot say,
+so the thumb widens to fit what it is actually given. You can still grab an automated
 slider — it takes the signal back on the next pass — but releasing never writes
 back, since that would overwrite the signal with a number.
 

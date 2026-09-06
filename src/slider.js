@@ -135,6 +135,11 @@ export function applySliderValue(root, key, value) {
   const input = wrap.querySelector('input');
   const out = wrap.querySelector('.cm-slider-val');
   if (!input) return;
+  // A composed signal - sine(...) * 0.5, or a bare lambda - cannot declare the
+  // range it sweeps, so widen to fit rather than pinning the thumb at an end
+  // while the sound carries on past it. Self-corrects within one cycle.
+  if (value < Number(input.min)) input.min = String(value);
+  if (value > Number(input.max)) input.max = String(value);
   sliderValues.set(key, value);
   input.value = String(value);
   if (out) out.textContent = Number(value).toFixed(decimalsFor(input.step));

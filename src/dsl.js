@@ -78,7 +78,7 @@ export const FUNCS = {
   ring: { sig: 'ring(seq)', doc: 'A list that wraps on out-of-range indexing, so r[9] works on a 4-element ring.' },
   slider: {
     sig: 'slider(value, lo=0, hi=1, step=None, label=None)',
-    doc: 'A draggable control, rendered inline right where you wrote it. Returns its current value, so drop it anywhere a number goes. Dragging retunes the running music; releasing writes the new value back into the code. Hand it a signal instead of a literal — slider(saw(4, 50, 110), 50, 110) — and it drives itself, overriding the hand value and moving to match.',
+    doc: 'A draggable control, rendered inline right where you wrote it. Returns its current value, so drop it anywhere a number goes. Dragging retunes the running music; releasing writes the new value back into the code. Hand it a signal instead of a literal — slider(saw(4, 50, 110)) — and it drives itself, overriding the hand value and moving to match. It takes its range from the signal, so there is no need to repeat lo and hi.',
   },
   saw: { sig: 'saw(period=4, lo=0, hi=1)', doc: 'A rising ramp over `period` beats, as a function of time. Pass it anywhere a number goes.' },
   isaw: { sig: 'isaw(period=4, lo=0, hi=1)', doc: 'A falling ramp over `period` beats.' },
