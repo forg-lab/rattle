@@ -106,6 +106,34 @@ They answer the question in order:
 The panel's `×N` is how many readings that channel has sent. If it climbs while
 you tilt the board, the whole path is working and the question is a musical one.
 
+## If the log fills with "not a channel name"
+
+Some boards drop the odd character on the way to the host. You will see it as a
+steady trickle of complaints about lines like `tilt_x 0.84` or `ligh, 0.0` —
+the reading is right, a character just went missing in transit.
+
+It is a fault in the board's interface firmware, not in your code, and it shows
+up two ways at once: **the MICROBIT drive also fails to appear** when you plug
+the board in. If you have both symptoms, that is the one to fix.
+
+The fix is to update the board's interface firmware:
+
+1. Unplug the micro:bit.
+2. Hold down the **reset button on the back** and plug the USB cable in while
+   still holding it.
+3. A drive called **MAINTENANCE** appears instead of MICROBIT.
+4. Drop the latest firmware from
+   <https://microbit.org/get-started/user-guide/firmware/> onto it.
+5. It reboots itself. Re-flash `controller.py` afterwards.
+
+Until then it is mostly survivable. A varying channel that loses a line is
+corrected 20ms later by the next one, so tilt and light still feel smooth. A
+button press only happens once, which is why `say()` in `controller.py` prints
+each trigger three times: they all arrive inside a single pass of your loop and
+`hit()` is idempotent, so however many survive, it still counts as one press.
+On a board dropping a third of its lines that takes a press from about 60% to
+about 95% reliable. Raise the repeat count if yours is worse.
+
 ## Things worth knowing before a lesson
 
 - **Triggers land on the next loop pass, not instantly.** rattle runs 250ms

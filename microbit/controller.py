@@ -13,6 +13,12 @@
 from microbit import *
 
 
+def say(name):
+    """Send a trigger, with enough repeats to survive a dropped character."""
+    for _ in range(3):
+        print(name + ",1")
+
+
 def unit(v, lo, hi):
     """Squash a reading into 0..1, which is the range every channel carries."""
     if v < lo:
@@ -29,14 +35,20 @@ while True:
     print("light,", unit(display.read_light_level(), 0, 255))
 
     # --- things that happen: printed only when they do, so hit() fires once
+    #
+    # Sent three times over. A varying channel that loses a line is corrected
+    # 20ms later by the next one, but a button press only happens once, and
+    # some boards drop the odd character on the way to the host. Three copies
+    # arrive inside a single pass of your loop, and hit() is idempotent, so
+    # they still count as one press however many of them survive.
     if button_a.was_pressed():
-        print("a,1")
+        say("a")
     if button_b.was_pressed():
-        print("b,1")
+        say("b")
     if accelerometer.was_gesture("shake"):
-        print("shake,1")
+        say("shake")
     if pin_logo.is_touched():
-        print("logo,1")
+        say("logo")
 
     # 20ms is 50 readings a second, which is far finer than any beat you will
     # play. Slower is fine; much faster only floods the cable.

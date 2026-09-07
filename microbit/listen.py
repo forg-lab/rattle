@@ -15,6 +15,7 @@ import select
 import sys
 import termios
 import time
+import tty
 
 BAUD = 115200
 
@@ -50,11 +51,16 @@ def main():
         print(f'Could not open {port}: {e}')
         return 1
     try:
+        # Full raw mode. Clearing a few flags by hand is not enough: the line
+        # discipline still mangles the stream, and the symptom is a character
+        # missing here and there rather than an obvious failure.
+        tty.setraw(fd)
         attrs = termios.tcgetattr(fd)
         attrs[4] = attrs[5] = termios.B115200
-        attrs[3] &= ~(termios.ICANON | termios.ECHO | termios.ISIG)
-        attrs[0] &= ~(termios.IXON | termios.IXOFF | termios.ICRNL)
+        attrs[6][termios.VMIN] = 0
+        attrs[6][termios.VTIME] = 0
         termios.tcsetattr(fd, termios.TCSANOW, attrs)
+        termios.tcflush(fd, termios.TCIFLUSH)
 
         buf = b''
         seen = 0
@@ -69,7 +75,7 @@ def main():
             while b'\n' in buf:
                 line, buf = buf.split(b'\n', 1)
                 seen += 1
-                print(' ', line.decode('utf-8', 'replace').rstrip())
+                print(' ', line.decode('utf-8', 'replace').rstrip(), flush=True)
             if seen == 0 and time.time() - started > 3:
                 print('Nothing yet after 3s. The board is probably not flashed,')
                 print('or is running a program that does not print.')
