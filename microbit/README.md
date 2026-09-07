@@ -4,17 +4,38 @@ A micro:bit is a slider that moves itself. It sends readings up the USB cable,
 rattle reads them at the moment it emits a note, and they land in the music the
 same way a dragged slider does.
 
-## Setting up, once
+## Flashing the board
+
+A brand-new micro:bit has no MicroPython on it and sends nothing, so this step
+is not optional — until it is done, rattle will connect happily and then sit
+there receiving nothing.
 
 1. Plug the micro:bit in over USB.
-2. Open <https://python.microbit.org>, paste in `controller.py`, and click
-   **Send to micro:bit**. (It flashes over WebUSB, so the MICROBIT drive does
-   not need to appear.)
-3. In rattle, click **micro:bit** in the header and pick the board from the
-   list. One click per session.
+2. Open <https://python.microbit.org> in Chrome or Edge.
+3. Paste in the contents of [`controller.py`](controller.py), replacing what is
+   already in the editor.
+4. Click **Send to micro:bit**, and choose the board in the picker that appears.
+   The first time it also asks to pair — say yes.
+5. The board's lights flicker for a few seconds. That is it.
 
-Needs Chrome or Edge — Web Serial does not exist in Safari or Firefox. It does
-work on ChromeOS.
+This flashes over **WebUSB**, using the same debug interface the board exposes
+for programming, so the `MICROBIT` drive does not need to appear in Finder or
+Explorer. If yours does appear, dragging a `.hex` onto it works too, but the
+website is the path that always works.
+
+Then in rattle, click **micro:bit** in the header and pick the board. One click
+per session. Needs Chrome or Edge — Web Serial does not exist in Safari or
+Firefox, though it does work on ChromeOS.
+
+### One port, one owner
+
+A serial port can only be open in one place at a time. If rattle has the board
+connected, a second rattle tab cannot also have it, and neither can
+`listen.py`. Disconnect in one before connecting in the other.
+
+Flashing at python.microbit.org uses a different interface from the one rattle
+reads, so in principle they coexist — but if a flash fails, disconnecting
+rattle first is the thing to try.
 
 ## The protocol
 
