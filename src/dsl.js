@@ -78,6 +78,14 @@ export const FUNCS = {
     sig: 'every(n, offset=0)',
     doc: 'True when this beat lands on the n-beat grid — the functional answer to "sometimes". No counter to advance and no state to fall out of step after a hot swap, so two loops asking every(8) always agree. It tests the grid, so n wants to be a multiple of the loop\u2019s own sleep.',
   },
+  mb: {
+    sig: 'mb(name, lo=None, hi=None)',
+    doc: 'A micro:bit channel: the board\u2019s latest reading for `name`, carrying 0..1, mapped onto lo..hi the same way sine(4, lo, hi) maps a sweep. For the things that VARY \u2014 tilt, light. A channel nothing has sent reads 0, so a piece written for a board still runs without one.',
+  },
+  hit: {
+    sig: 'hit(name)',
+    doc: 'True when a new non-zero reading for `name` arrived since this loop last slept. For the things that HAPPEN \u2014 a button, a shake, a touched pin. A question about the beat rather than a counter: asking twice in one pass answers the same both times.',
+  },
   beat: {
     sig: 'beat()',
     doc: 'This thread\u2019s position in beats since the run started. every() is written in terms of it; use it directly for anything every() does not cover, such as beat() % 8 < 1 for the first beat of each bar.',
@@ -153,6 +161,7 @@ export const PARAM_DOCS = {
   values: ['The list to step through, one entry per `step` beats. Wraps.'],
   label: ['Name shown on the slider.'],
   offset: ['Shift the grid. every(4, 1) fires on beats 1, 5, 9 rather than 0, 4, 8.', '0'],
+  name: ['The channel name the board prints before the comma.'],
 
   // --- shapes: position and life
   x: ['Horizontal position. -1 is the left edge, 1 the right.', '0'],

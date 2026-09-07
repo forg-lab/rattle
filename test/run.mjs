@@ -4,7 +4,7 @@
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
-const FILES = ['emit.mjs', 'render.mjs', 'demos.mjs', 'snippets.mjs'];
+const FILES = ['emit.mjs', 'render.mjs', 'microbit.mjs', 'demos.mjs', 'snippets.mjs'];
 const verbose = process.argv.includes('-v');
 
 let failed = 0;

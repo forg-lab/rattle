@@ -30,6 +30,10 @@ class Task:
         self.bpm = 60.0
         self.synth = 'saw'
         self.seed = 1
+        # Reading counts as of this task's last sleep. What makes hit()
+        # idempotent: asking twice in one pass gives the same answer, because
+        # the mark only moves when the thread does.
+        self.mb_seen = {}
 
 
 def _prime(now):
@@ -168,6 +172,7 @@ def _step(task, horizon):
         if d is None:
             d = 0.0
         task.t += float(d) * (60.0 / task.bpm)
+        task.mb_seen = dict(_MB_SEQ)
 
 
 def _run_until(now, horizon):
@@ -410,6 +415,65 @@ def rrand_i(lo, hi):
 
 def one_in(n):
     return _rnd() < (1.0 / n)
+
+
+# ------------------------------------------------------------- micro:bit
+#
+# A board is a slider that moves itself. Readings arrive from the main thread
+# exactly as a slider drag does, and are read here at emit time, so they cross
+# into logical time by the same route and need no new machinery.
+#
+# A channel carries 0..1, like every signal in the language: mb(name, lo, hi)
+# maps it the way sine(4, lo, hi) maps a sweep. Scale on the board.
+#
+# Deliberately NOT cleared by _reset(): the values belong to the hardware, not
+# to the program, so stopping and re-running keeps the controller live.
+_MB = {}
+_MB_SEQ = {}
+
+
+def _set_mb(name, value):
+    _MB[name] = float(value)
+    _MB_SEQ[name] = _MB_SEQ.get(name, 0) + 1
+
+
+def mb(name, lo=None, hi=None):
+    """The board's latest reading for a channel, 0..1, optionally mapped.
+
+    mb("tilt_x") is the raw 0..1. mb("tilt_x", 50, 110) maps it, the same way
+    sine(4, 50, 110) does. A channel nothing has sent yet reads 0, which is lo
+    once mapped - silence rather than a crash when a board is unplugged.
+    """
+    v = _MB.get(name, 0.0)
+    if lo is None and hi is None:
+        return v
+    if lo is None:
+        lo = 0.0
+    if hi is None:
+        hi = 1.0
+    if v < 0.0:
+        v = 0.0
+    elif v > 1.0:
+        v = 1.0
+    return lo + (hi - lo) * v
+
+
+def hit(name):
+    """True when a new non-zero reading arrived since this thread's last sleep.
+
+    For the things that happen rather than the things that vary: a button, a
+    shake, a touched pin. Non-zero because a board that reports a button every
+    tick sends a stream of zeros between presses, and only the presses are
+    events.
+
+    It is a question about the beat, like every(), not a counter: asking twice
+    in one pass gives the same answer both times.
+    """
+    if _CUR is None:
+        return False
+    if not _MB.get(name, 0.0):
+        return False
+    return _MB_SEQ.get(name, 0) != _CUR.mb_seen.get(name, 0)
 
 
 def beat():

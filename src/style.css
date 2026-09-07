@@ -203,6 +203,9 @@ body.viz-on #code-fade {
 }
 body.viz-on #viz-toggle { color: var(--accent); border-color: #2f5d51; }
 
+/* connected, and receiving. Same green as a running transport. */
+#mb-toggle.on { color: var(--accent); border-color: #2f5d51; }
+
 /* --------------------------------------------------------------- log pane */
 
 .pane-title {

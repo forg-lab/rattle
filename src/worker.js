@@ -128,6 +128,17 @@ self.onmessage = (ev) => {
     return;
   }
 
+  if (msg.type === 'mb') {
+    // Same route a slider drag takes, for the same reason: the value is read
+    // at emit time, so it crosses into logical time without touching the clock.
+    try {
+      mp.runPython('_set_mb(' + JSON.stringify(msg.name) + ',' + Number(msg.value) + ')');
+    } catch (e) {
+      postMessage({ type: 'error', line: -1, text: String(e.message || e) });
+    }
+    return;
+  }
+
   if (msg.type === 'stop') {
     stopped = true;
     try { mp.runPython('_reset()'); } catch (_) { /* nothing running */ }

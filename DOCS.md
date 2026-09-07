@@ -209,6 +209,54 @@ and none of them need names.
 
 ---
 
+## micro:bit
+
+A board is a slider that moves itself. Readings arrive from the browser over
+USB and are read at the moment a note is emitted, so they reach the music by
+the same route a dragged slider does.
+
+```python
+mb("tilt_x")             # the board's latest reading, 0..1
+mb("tilt_x", 50, 110)    # ...mapped, like sine(4, 50, 110)
+hit("a")                 # True once, when a new non-zero reading arrives
+```
+
+`mb` is for the things that **vary**; `hit` for the things that **happen**.
+
+```python
+@live_loop("bass")
+def bass():
+    play(36, cutoff=mb("tilt_y", 45, 105), release=0.4)
+    if hit("a"):
+        sample("clap")
+    sleep(0.25)
+```
+
+Click **micro:bit** in the header and choose the board. Chrome or Edge only —
+Web Serial does not exist in Safari or Firefox, though it does work on
+ChromeOS. Flashing and the line protocol are in [microbit/](microbit/); the
+board program is [microbit/controller.py](microbit/controller.py).
+
+Channels carry **0..1**, like everything else that varies here, so scale on the
+board rather than in the music. A value outside that range clamps, and rattle
+says so in the log the first time — the usual cause is sending a raw reading,
+and a parameter silently pinned at its maximum looks nothing like its cause.
+
+A channel nothing has sent reads `0`, so a piece written for a board still runs
+without one: quiet, at the bottom of every range. Unplugging mid-piece is not
+an error either — channels hold their last value and the music carries on.
+
+`hit(name)` is true when a new non-zero reading arrived since this loop last
+slept. Like `every()`, it is a question about the beat rather than a counter,
+so asking twice in one pass answers the same both times. Non-zero because a
+board that reports a button every tick sends zeros between presses, and only
+the presses are events.
+
+Triggers are quantised to your loop's grid: rattle runs 250ms ahead of what you
+hear, so a press lands on the next pass rather than instantly. At `sleep(0.25)`
+that is within a sixteenth of where you pressed, which reads as deliberate
+rather than late. Continuous channels have no audible version of this problem.
+
 ## Visuals
 
 Press **visuals** in the header (or `Cmd/Ctrl+Shift+V`) and the canvas appears

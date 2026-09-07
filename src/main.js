@@ -11,6 +11,7 @@ import {
 import { oneDark } from '@codemirror/theme-one-dark';
 import { rattleCompletions } from './complete.js';
 import { sliderField, setSliders, sliderValues, configureSliders, applySliderValue } from './slider.js';
+import { MicroBit } from './microbit.js';
 import {
   setSites, siteField, errField, siteMark, flashIn, clearFlashesIn, markErrorIn,
 } from './marks.js';
@@ -609,6 +610,38 @@ setHovers(getPref('hovers'));
 setTabAccepts(getPref('tabAccepts'));
 setLineNumbers(getPref('lineNumbers'));
 setLogMin(getPref('logMin'));
+
+// ---------------------------------------------------------------- micro:bit
+//
+// Readings go down the same pipe as a slider drag. Only changes are sent: a
+// board reporting tilt at 50Hz would otherwise post a message per reading per
+// channel for values that mostly have not moved.
+const mbBtn = document.getElementById('mb-toggle');
+const mbLast = new Map();
+
+const microbit = new MicroBit(
+  (name, value) => {
+    if (mbLast.get(name) === value) return;
+    mbLast.set(name, value);
+    worker.postMessage({ type: 'mb', name, value });
+  },
+  (text, kind) => say(text, kind),
+);
+
+if (MicroBit.available) {
+  mbBtn.hidden = false;
+  mbBtn.onclick = async () => {
+    if (microbit.connected) {
+      await microbit.disconnect();
+    } else {
+      mbLast.clear();
+      await microbit.connect();
+    }
+    mbBtn.classList.toggle('on', microbit.connected);
+    mbBtn.textContent = microbit.connected ? 'micro:bit ·' : 'micro:bit';
+    view.focus();
+  };
+}
 
 const vizBtn = document.getElementById('viz-toggle');
 const codeOpacity = document.getElementById('code-opacity');
