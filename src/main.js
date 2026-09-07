@@ -620,6 +620,7 @@ setLogMin(getPref('logMin'));
 // a,1 on each press would have worked exactly once and then never again.
 const mbBtn = document.getElementById('mb-toggle');
 const mbPanel = document.getElementById('mb-panel');
+const mbRows = document.getElementById('mb-rows');
 const mbCount = new Map();     // channel -> readings seen, for the monitor
 
 const microbit = new MicroBit(
@@ -659,10 +660,10 @@ function drawMbPanel(force) {
   mbDrawnAt = now;
   const rows = [...microbit.channels.entries()];
   if (!rows.length) {
-    mbPanel.innerHTML = '<div class="mb-row mb-empty">connected · waiting for the board to send something</div>';
+    mbRows.innerHTML = '<div class="mb-row mb-empty">waiting for the board…</div>';
     return;
   }
-  mbPanel.innerHTML = rows.map(([name, v]) => {
+  mbRows.innerHTML = rows.map(([name, v]) => {
     const pct = Math.max(0, Math.min(1, v)) * 100;
     return `<div class="mb-row"><span class="mb-name"></span>` +
            `<span class="mb-bar"><i style="width:${pct}%"></i></span>` +
@@ -670,7 +671,7 @@ function drawMbPanel(force) {
   }).join('');
   // textContent rather than interpolation: a channel name is whatever the
   // board chose to print, and it is not going anywhere near innerHTML.
-  [...mbPanel.querySelectorAll('.mb-row')].forEach((row, i) => {
+  [...mbRows.querySelectorAll('.mb-row')].forEach((row, i) => {
     const [name, v] = rows[i];
     row.querySelector('.mb-name').textContent = name;
     row.querySelector('.mb-val').textContent = v.toFixed(2);

@@ -411,26 +411,30 @@ body.no-gutter #editor .cm-gutters { display: none; }
 }
 
 /* ------------------------------------------------------- micro:bit monitor
-   What the board is actually sending. "It does nothing" is a question about
-   the cable, the flash and the channel names all at once, and one live
-   readout answers all three. */
+   Lives at the foot of the log pane rather than floating over the code, so it
+   collapses with the log and never covers a line you are editing. */
 #mb-panel {
-  position: fixed;
-  left: 12px;
-  bottom: 12px;
-  z-index: 6;
-  min-width: 210px;
-  padding: 8px 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: rgba(22, 24, 29, .93);
+  flex: 0 0 auto;
+  border-top: 1px solid var(--line);
+  padding: 7px 12px 9px;
   font: 11.5px/1.6 var(--mono);
   color: var(--dim);
-  pointer-events: none;
+  max-height: 40%;
+  overflow-y: auto;
+}
+body.log-min #mb-panel { display: none; }
+
+.mb-head {
+  font-size: 10px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  opacity: .65;
+  margin-bottom: 3px;
 }
 .mb-row { display: flex; align-items: center; gap: 8px; }
-.mb-empty { color: var(--hot); }
-.mb-name { flex: 0 0 62px; color: var(--fg); }
+.mb-empty { color: var(--hot); font-size: 11px; }
+.mb-name { flex: 0 0 58px; color: var(--fg); }
 .mb-bar {
   flex: 1 1 auto;
   height: 5px;
@@ -444,5 +448,5 @@ body.no-gutter #editor .cm-gutters { display: none; }
   background: var(--accent);
   transition: width .1s linear;
 }
-.mb-val { flex: 0 0 34px; text-align: right; color: var(--accent); }
-.mb-n { flex: 0 0 44px; text-align: right; opacity: .55; }
+.mb-val { flex: 0 0 32px; text-align: right; color: var(--accent); }
+.mb-n { flex: 0 0 38px; text-align: right; opacity: .55; }
