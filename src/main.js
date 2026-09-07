@@ -613,20 +613,77 @@ setLogMin(getPref('logMin'));
 
 // ---------------------------------------------------------------- micro:bit
 //
-// Readings go down the same pipe as a slider drag. Only changes are sent: a
-// board reporting tilt at 50Hz would otherwise post a message per reading per
-// channel for values that mostly have not moved.
+// Readings go down the same pipe as a slider drag.
+//
+// EVERY reading is forwarded, deliberately. Skipping ones whose value repeats
+// looks like a cheap saving, but hit() counts arrivals - so a button sending
+// a,1 on each press would have worked exactly once and then never again.
 const mbBtn = document.getElementById('mb-toggle');
-const mbLast = new Map();
+const mbPanel = document.getElementById('mb-panel');
+const mbCount = new Map();     // channel -> readings seen, for the monitor
 
 const microbit = new MicroBit(
   (name, value) => {
-    if (mbLast.get(name) === value) return;
-    mbLast.set(name, value);
+    mbCount.set(name, (mbCount.get(name) || 0) + 1);
     worker.postMessage({ type: 'mb', name, value });
+    drawMbPanel();
   },
   (text, kind) => say(text, kind),
 );
+
+// Dev only, and compiled out of the build: lets the browser tests drive the
+// parser and the monitor end to end without a board on the desk.
+if (import.meta.env.DEV) window.__microbit = microbit;
+
+// The monitor: what the board is actually sending, right now.
+//
+// Driven by the readings themselves rather than by a timer, so there is no
+// second piece of state that can be running when nothing is arriving or
+// stopped when something is. Throttled, because 50Hz across several channels
+// is a lot of DOM for something the eye reads at ten.
+let mbDrawnAt = 0;
+let mbPending = null;
+
+function drawMbPanel(force) {
+  if (!microbit.connected) return;
+  const now = performance.now();
+  if (!force && now - mbDrawnAt < 100) {
+    // Trailing edge. Without it the readings inside the last window are never
+    // drawn, so the panel settles showing a value and a count that are both
+    // slightly out of date - which reads exactly like it is not working.
+    if (!mbPending) {
+      mbPending = setTimeout(() => { mbPending = null; drawMbPanel(true); }, 110);
+    }
+    return;
+  }
+  mbDrawnAt = now;
+  const rows = [...microbit.channels.entries()];
+  if (!rows.length) {
+    mbPanel.innerHTML = '<div class="mb-row mb-empty">connected · waiting for the board to send something</div>';
+    return;
+  }
+  mbPanel.innerHTML = rows.map(([name, v]) => {
+    const pct = Math.max(0, Math.min(1, v)) * 100;
+    return `<div class="mb-row"><span class="mb-name"></span>` +
+           `<span class="mb-bar"><i style="width:${pct}%"></i></span>` +
+           `<span class="mb-val"></span><span class="mb-n"></span></div>`;
+  }).join('');
+  // textContent rather than interpolation: a channel name is whatever the
+  // board chose to print, and it is not going anywhere near innerHTML.
+  [...mbPanel.querySelectorAll('.mb-row')].forEach((row, i) => {
+    const [name, v] = rows[i];
+    row.querySelector('.mb-name').textContent = name;
+    row.querySelector('.mb-val').textContent = v.toFixed(2);
+    row.querySelector('.mb-n').textContent = '×' + (mbCount.get(name) || 0);
+  });
+}
+
+function setMbUi(on) {
+  mbBtn.classList.toggle('on', on);
+  mbBtn.textContent = on ? 'micro:bit ·' : 'micro:bit';
+  mbPanel.hidden = !on;
+  if (on) drawMbPanel(true);
+}
 
 if (MicroBit.available) {
   mbBtn.hidden = false;
@@ -634,13 +691,15 @@ if (MicroBit.available) {
     if (microbit.connected) {
       await microbit.disconnect();
     } else {
-      mbLast.clear();
+      mbCount.clear();
       await microbit.connect();
     }
-    mbBtn.classList.toggle('on', microbit.connected);
-    mbBtn.textContent = microbit.connected ? 'micro:bit ·' : 'micro:bit';
+    setMbUi(microbit.connected);
     view.focus();
   };
+  // The read loop can end on its own - unplugged, or the board reset - and the
+  // button must not go on claiming a connection that is gone.
+  microbit.onClosed = () => setMbUi(false);
 }
 
 const vizBtn = document.getElementById('viz-toggle');

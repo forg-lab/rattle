@@ -409,3 +409,40 @@ body.no-gutter #editor .cm-gutters { display: none; }
 @media (max-width: 430px) {
   .logo { display: none; }
 }
+
+/* ------------------------------------------------------- micro:bit monitor
+   What the board is actually sending. "It does nothing" is a question about
+   the cable, the flash and the channel names all at once, and one live
+   readout answers all three. */
+#mb-panel {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 6;
+  min-width: 210px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(22, 24, 29, .93);
+  font: 11.5px/1.6 var(--mono);
+  color: var(--dim);
+  pointer-events: none;
+}
+.mb-row { display: flex; align-items: center; gap: 8px; }
+.mb-empty { color: var(--hot); }
+.mb-name { flex: 0 0 62px; color: var(--fg); }
+.mb-bar {
+  flex: 1 1 auto;
+  height: 5px;
+  border-radius: 3px;
+  background: #2a2f39;
+  overflow: hidden;
+}
+.mb-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transition: width .1s linear;
+}
+.mb-val { flex: 0 0 34px; text-align: right; color: var(--accent); }
+.mb-n { flex: 0 0 44px; text-align: right; opacity: .55; }

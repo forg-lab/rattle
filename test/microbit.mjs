@@ -6,7 +6,7 @@
 // scheduler exactly where the main thread injects them.
 
 import { transform } from '../src/transform.js';
-import { parseLine } from '../src/microbit.js';
+import { parseLine, MicroBit } from '../src/microbit.js';
 import { micropython, ok, report } from './lib.mjs';
 
 const { mp, runtime } = await micropython();
@@ -28,6 +28,37 @@ ok(parseLine('# my board') === null, 'a comment line is ignored');
 ok(/not a channel name/.test(p('bad name,1')), 'a name with a space is reported, not dropped');
 ok(/not a number/.test(p('y,abc')), 'a value that is not a number is reported');
 ok(/y/.test(p('y,abc')), 'and the report names the channel', p('y,abc'));
+
+// -------------------------------------------------------- the reading stream
+// Every line is a reading, including one whose value repeats. hit() counts
+// arrivals, so collapsing repeats made a button work exactly once and then
+// never again - the bug that made the first build look like it did nothing.
+const seen = [];
+const board = new MicroBit((name, value) => seen.push(`${name}=${value}`), () => {});
+board.connected = true;
+board.feed('tilt_x, 0.1\na,1\n');
+board.feed('a,1\n');
+board.feed('a,1\n');
+ok(seen.filter(x => x === 'a=1').length === 3,
+   'three identical presses are three readings, not one',
+   seen.join(' '));
+
+// lines split across chunks, as a real serial read delivers them
+const split = [];
+const b2 = new MicroBit((name, value) => split.push(`${name}=${value}`), () => {});
+b2.connected = true;
+b2.feed('til');
+b2.feed('t_x, 0.2\nlig');
+b2.feed('ht, 0.9\n');
+ok(split.join() === 'tilt_x=0.2,light=0.9',
+   'a reading split across chunks is reassembled', split.join(' '));
+
+// a board that never sends a newline must not grow the buffer forever
+const b3 = new MicroBit(() => {}, () => {});
+b3.connected = true;
+for (let i = 0; i < 50; i++) b3.feed('x'.repeat(500));
+ok(b3.buf.length <= 4096, 'a board with no newlines cannot grow the buffer without bound',
+   `buffer ${b3.buf.length} bytes after 25kB of silence`);
 
 // ------------------------------------------------- what mb() and hit() mean
 function session(prog, script, beats = 8) {

@@ -69,6 +69,22 @@ slept. It is a question about the beat, not a counter — asking twice in one
 pass answers the same both times — so it behaves like `every()` rather than
 like something you have to remember to advance.
 
+## If it seems to do nothing
+
+Click **micro:bit** and watch the log and the panel in the bottom-left corner.
+They answer the question in order:
+
+| what you see | what it means |
+|---|---|
+| nothing in the port picker | the board is not in DAPLink mode, or the cable is charge-only. Try another cable first — that is the usual one. |
+| `micro:bit connected · listening` then silence, then `the board has sent nothing` | the cable is fine and the port is open, but no program is printing. Flash `controller.py` and press the reset button on the back. |
+| `micro:bit sent: "..."` lines | data is arriving. Read the names in those lines and check they are the names your rattle code asks for — `mb("tiltx")` will never match a board printing `tilt_x`. |
+| the panel shows channels, values move | it is all working. If the music still does not change, the channel is probably mapped into a range too narrow to hear: try `mb("tilt_x", 40, 120)` on a cutoff. |
+| a channel sits at `1.00` and never moves | the board is sending values above 1. The log will have said so once. Scale on the board. |
+
+The panel's `×N` is how many readings that channel has sent. If it climbs while
+you tilt the board, the whole path is working and the question is a musical one.
+
 ## Things worth knowing before a lesson
 
 - **Triggers land on the next loop pass, not instantly.** rattle runs 250ms

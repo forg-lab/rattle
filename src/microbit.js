@@ -57,6 +57,7 @@ export class MicroBit {
     this.reader = null;
     this.connected = false;
     this.channels = new Map();   // name -> last value, for the UI
+    this.onClosed = () => {};    // set by the UI, so a lost board updates it
     this.#reset();
   }
 
@@ -65,6 +66,11 @@ export class MicroBit {
     this.warned = new Set();     // channels already told off, once each
     this.badLines = 0;
     this.lastBadAt = 0;
+    // Echo the first handful of lines verbatim. "It does nothing" is nearly
+    // always answered by seeing the actual bytes, and the alternative - a
+    // toggle nobody finds - answers it for no one.
+    this.echo = 6;
+    this.silenceTimer = null;
   }
 
   static get available() {
@@ -83,6 +89,12 @@ export class MicroBit {
         filters: [{ usbVendorId: 0x0d28, usbProductId: 0x0204 }],
       });
       await this.port.open({ baudRate: 115200 });
+      // Some CDC firmware sends nothing until the host raises DTR. Harmless
+      // where it is not needed, and the difference between working and a
+      // completely silent port where it is.
+      try {
+        await this.port.setSignals({ dataTerminalReady: true, requestToSend: true });
+      } catch (_) { /* not every platform implements it; not fatal */ }
     } catch (e) {
       // Cancelling the picker is a choice, not a fault.
       if (e && e.name === 'NotFoundError') return false;
@@ -92,13 +104,23 @@ export class MicroBit {
     }
     this.#reset();
     this.connected = true;
-    this.onLog('micro:bit connected', 'ok');
+    this.onLog('micro:bit connected · listening', 'ok');
+    // A port that opens but never speaks is the commonest failure, and looks
+    // exactly like a working one until you notice nothing changes.
+    this.silenceTimer = setTimeout(() => {
+      if (this.connected && this.channels.size === 0) {
+        this.onLog('micro:bit: connected, but the board has sent nothing. Is ' +
+                   'controller.py flashed and running? Press the reset button ' +
+                   'on the back.', 'warn');
+      }
+    }, 2500);
     this.#read();
     return true;
   }
 
   async disconnect() {
     this.connected = false;
+    clearTimeout(this.silenceTimer);
     try { if (this.reader) await this.reader.cancel(); } catch (_) { /* already gone */ }
     try { if (this.port) await this.port.close(); } catch (_) { /* already gone */ }
     this.reader = null;
@@ -124,7 +146,9 @@ export class MicroBit {
         // Unplugged mid-run. Say so; the program keeps playing on last values.
         this.connected = false;
         this.port = null;
+        clearTimeout(this.silenceTimer);
         this.onLog('micro:bit unplugged', 'warn');
+        this.onClosed();
       }
     }
   }
@@ -140,6 +164,11 @@ export class MicroBit {
     const lines = this.buf.split('\n');
     this.buf = lines.pop();
     for (const line of lines) {
+      if (this.echo > 0) {
+        this.echo--;
+        this.onLog('micro:bit sent: ' + JSON.stringify(line), '');
+        if (this.echo === 0) this.onLog('micro:bit: ...listening quietly from here', '');
+      }
       const r = parseLine(line);
       if (!r) continue;
       if (r.error) { this.#complain(r.error); continue; }
