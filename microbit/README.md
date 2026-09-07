@@ -65,15 +65,9 @@ one line, and the accelerometer's raw ±1000 is exactly what it is for.
 
 ## Using it
 
+`mb()` is for things that **vary**, `hit()` for things that **happen**.
+
 ```python
-use_bpm(110)
-
-@live_loop("bass")
-def bass():
-    use_synth("saw")
-    play(36, cutoff=mb("tilt_x", 50, 110), release=0.5)
-    sleep(0.5)
-
 @live_loop("pad")
 def pad():
     if hit("a"):
@@ -83,7 +77,44 @@ def pad():
     sleep(0.25)
 ```
 
-`mb()` is for things that **vary**, `hit()` for things that **happen**.
+### Make the tilt play, not just turn a knob
+
+The obvious thing is to hang tilt off a cutoff. It works, and it is dull: the
+music is the same music, slightly brighter. The board feels like a knob because
+it *is* a knob.
+
+The better move is to let tilt choose **where in a scale** a figure sits:
+
+```python
+notes = scale("e2", "minor_pentatonic", num_octaves=3)
+
+@live_loop("lead")
+def lead():
+    use_synth("pluck")
+    here = int(mb("tilt_x", 0, 7))     # tilt walks up and down the scale
+    spread = int(mb("tilt_y", 1, 4))   # ...and stretches the figure apart
+    for step in (0, spread, spread * 2, spread):
+        play(notes[here + step], release=0.45, cutoff=mb("tilt_y", 60, 112))
+        sleep(0.25)
+```
+
+Two things make this work in a room full of people. Holding the board still
+still produces movement, because the arpeggio runs on its own — so nobody is
+ever standing there in silence. And it is **pentatonic**, so no tilt can play a
+wrong note. A scale that cannot be wrong is worth more than any amount of
+cleverness when thirty people are waving boards about.
+
+The whole thing is `demos/14-microbit.py`.
+
+### Ranges can run backwards
+
+`mb(name, lo, hi)` does not mind `lo` being bigger than `hi`:
+
+```python
+room=mb("light", 0.55, 0.0)     # cup your hands over it and it floods
+```
+
+Covering the board sends `light` toward 0, which is the *top* of that range.
 
 `hit(name)` is true when a new non-zero reading arrived since this loop last
 slept. It is a question about the beat, not a counter — asking twice in one
