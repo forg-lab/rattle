@@ -208,8 +208,6 @@ worker.onmessage = (ev) => {
   }
 };
 
-const toUserLine = (n) => (n >= 1 ? Math.max(1, n - 1) : -1);
-
 function consume(box, data) {
   let newSliders = false;
   for (const line of data.split('\n')) {
@@ -218,7 +216,8 @@ function consume(box, data) {
 
     if (f[0] === 'L') { say(box, line.slice(2)); continue; }
     if (f[0] === 'X') {
-      const ln = toUserLine(parseInt(f[2], 10));
+      // already a line in what the user typed: the runtime maps it (see _exc)
+      const ln = parseInt(f[2], 10);
       say(box, f[1] + ': ' + f[3] + (ln >= 1 ? ' — line ' + ln : ''), 'err');
       markErrorIn(box.view, ln);
       continue;

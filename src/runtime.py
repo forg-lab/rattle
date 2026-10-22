@@ -19,6 +19,18 @@ _RUN = 0        # bumped each Run, so the UI can discard records from the last o
 
 MAIN = '__main__'
 
+# The program is compiled under this filename (PROGRAM_FILE in transform.js),
+# so a traceback tells its frames from the runtime's. _LINE_OFF is how many
+# lines the transform put above the user's first one.
+_PROG = '<program>'
+_LINE_OFF = 0
+
+
+def _load(src, line_off):
+    global _LINE_OFF
+    _LINE_OFF = line_off
+    exec(compile(src, _PROG, 'exec'), globals())
+
 
 class Task:
     def __init__(self, name, fn, t):
@@ -94,22 +106,24 @@ def _spawn(nm, fn, sync, delay):
 
 
 def _exc(e):
-    # Pull a line number out of the traceback. Line numbers refer to the
-    # transformed source; the worker maps them back to what the user wrote.
+    # The user's line behind the traceback: the innermost frame that is in
+    # the program, minus what the transform prepended. A frame in runtime.py
+    # (a bad argument to play(), say) must blame the call, not the runtime.
     ln = -1
     try:
         buf = io.StringIO()
         sys.print_exception(e, buf)
+        tag = 'File "' + _PROG + '", line '
         for part in buf.getvalue().split('\n'):
-            i = part.find('line ')
+            i = part.find(tag)
             if i < 0:
                 continue
-            j = i + 5
+            j = i + len(tag)
             k = j
             while k < len(part) and '0' <= part[k] <= '9':
                 k += 1
             if k > j:
-                ln = int(part[j:k])
+                ln = max(1, int(part[j:k]) - _LINE_OFF)
     except Exception:
         pass
     return ln, type(e).__name__ + ': ' + str(e)

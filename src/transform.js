@@ -365,5 +365,23 @@ export function transform(src) {
 
   const globals = topLevelBindings(src, toks);
   const decl = globals.length ? '    global ' + globals.join(', ') + '\n' : '';
-  return { code: 'def __main__():\n' + decl + body.join('\n') + '\n    return\n' };
+  // lineOffset is how far every line moved down: the def, plus the global
+  // declaration when there is one. Whoever reads a traceback subtracts it.
+  const lineOffset = decl ? 2 : 1;
+  return { code: 'def __main__():\n' + decl + body.join('\n') + '\n    return\n', lineOffset };
+}
+
+// The filename the program is compiled under, so its frames can be told from
+// the runtime's own. Mirrored by _PROG in runtime.py.
+export const PROGRAM_FILE = '<program>';
+
+// The user's line behind a MicroPython traceback, or -1 if no frame of it is
+// in the program (an error wholly inside the runtime, say). The innermost
+// program frame is the one to blame: that is where the fix goes.
+export function programLine(traceback, lineOffset) {
+  const re = new RegExp('File "' + PROGRAM_FILE + '", line (\\d+)', 'g');
+  let line = -1;
+  let m;
+  while ((m = re.exec(traceback)) !== null) line = parseInt(m[1], 10);
+  return line >= 1 ? Math.max(1, line - lineOffset) : -1;
 }

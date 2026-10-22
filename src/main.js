@@ -190,10 +190,6 @@ function markError(line) {
 
 const clearError = () => markErrorIn(view, -1);
 
-// Runtime errors reported from inside Python carry transformed line numbers,
-// same as the ones the worker maps for compile failures.
-const toUserLine = (n) => (n >= 1 ? Math.max(1, n - 1) : -1);
-
 // ------------------------------------------------------------------ sliders
 
 const sliderSpecs = new Map();   // key ("a:b" in run-time offsets) -> spec
@@ -352,7 +348,8 @@ function consume(data) {
       continue;
     }
     if (f[0] === 'X') {
-      const ln = toUserLine(parseInt(f[2], 10));
+      // already a line in what the user typed: the runtime maps it (see _exc)
+      const ln = parseInt(f[2], 10);
       say(f[1] + ': ' + f[3] + (ln >= 1 ? ' — line ' + ln : ''), 'err');
       markError(ln);
       statusEl.textContent = ln >= 1 ? 'error on line ' + ln : 'error';

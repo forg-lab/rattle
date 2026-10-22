@@ -3,7 +3,7 @@
 // which is what bounds how far ahead of real time the Python may run.
 
 import runtimeSrc from './runtime.py?raw';
-import { transform } from './transform.js';
+import { transform, programLine } from './transform.js';
 
 const LOOKAHEAD = 0.25;   // seconds of run-ahead
 const WAIT_MS = 60;       // cap on a single park, so we never wedge
@@ -33,25 +33,20 @@ async function boot() {
   postMessage({ type: 'ready' });
 }
 
-// MicroPython puts the line number on the File "<stdin>" frame, so the message
-// and the location have to be pulled apart rather than the frame discarded.
+// Lines in a traceback refer to the transformed program; the runtime maps
+// its own tracebacks back (see _exc), and this does the same for the ones that
+// escape to here, which are compile errors. The message is the last line.
+let lineOffset = 1;   // of the program currently loaded
+
 function pyError(e) {
   const s = String((e && e.message) || e);
-  let line = -1;
-  const re = /line (\d+)/g;
-  let m;
-  while ((m = re.exec(s)) !== null) line = parseInt(m[1], 10);
   const msg = s
     .split('\n')
     .map((l) => l.trim())
     .filter((l) => l && !l.startsWith('File "') && !l.startsWith('Traceback'))
     .pop();
-  return { line, text: msg || s.trim() };
+  return { line: programLine(s, lineOffset), text: msg || s.trim() };
 }
-
-// The transform prepends `def __main__():`, so every line in what MicroPython
-// compiled is one further down than what the user actually typed.
-const toUserLine = (n) => (n >= 1 ? Math.max(1, n - 1) : -1);
 
 async function pump() {
   if (pumping) return;
@@ -65,7 +60,7 @@ async function pump() {
       postMessage({ type: 'tick', ahead: mp.globals.get('_AHEAD'), alive: mp.globals.get('_ALIVE') });
     } catch (e) {
       const { line, text } = pyError(e);
-      postMessage({ type: 'error', line: toUserLine(line), text });
+      postMessage({ type: 'error', line, text });
       stopped = true;
       break;
     }
@@ -101,7 +96,12 @@ self.onmessage = (ev) => {
     }
     try {
       mp.runPython('_prime(' + audioNow() + ')');
-      mp.runPython(t.code);
+      // The source crosses as a global rather than being run directly, so the
+      // runtime can compile it under a filename of its own and know how many
+      // lines sit above the user's first one.
+      lineOffset = t.lineOffset;
+      mp.globals.set('_SRC', t.code);
+      mp.runPython('_load(_SRC, ' + t.lineOffset + ')');
       mp.runPython('_run_main(__main__,' + Number(msg.runId || 0) + ')');
       mp.runPython('_flush()');
       const out = mp.globals.get('_OUT');
@@ -109,7 +109,7 @@ self.onmessage = (ev) => {
       postMessage({ type: 'ok', loops: mp.globals.get('_LOOPS') || '' });
     } catch (e) {
       const { line, text } = pyError(e);
-      postMessage({ type: 'error', line: toUserLine(line), text });
+      postMessage({ type: 'error', line, text });
       return;
     }
     stopped = false;

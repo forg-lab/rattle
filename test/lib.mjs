@@ -7,6 +7,7 @@
 
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { transform } from '../src/transform.js';
 
 export const ROOT = fileURLToPath(new URL('../', import.meta.url));
 
@@ -17,6 +18,18 @@ export async function micropython() {
   const { loadMicroPython } = await import(new URL('../public/micropython.mjs', import.meta.url).href);
   const mp = await loadMicroPython({ url: ROOT + 'public/micropython.wasm' });
   return { mp, runtime: fs.readFileSync(ROOT + 'src/runtime.py', 'utf8') };
+}
+
+/**
+ * Transform a program and define it inside mp, the way the worker does: the
+ * source crosses as a global so the runtime can compile it under its own
+ * filename and know how many lines the wrapper added. Throws on a compile
+ * error, with the traceback as the message.
+ */
+export function load(mp, prog) {
+  const t = transform(prog);
+  mp.globals.set('_SRC', t.code);
+  mp.runPython('_load(_SRC, ' + t.lineOffset + ')');
 }
 
 let failures = 0;
