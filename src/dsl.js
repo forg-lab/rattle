@@ -14,6 +14,7 @@ export const VIZ_CALLS = [...VIZ_SHAPES, ...VIZ_STATE];
 // identity.
 export const TAGGED_CALLS = [...SOUND_CALLS, 'slider', ...VIZ_CALLS];
 export const SLEEP_CALL = 'sleep';
+export const LOOP_CALL = 'live_loop';
 
 export const SYNTHS = [
   ['sine', 'pure sine, soft'],

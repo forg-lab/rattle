@@ -10,7 +10,7 @@
 // Edits are applied back-to-front so earlier offsets stay valid, and no edit
 // adds or removes a newline, so line numbering survives intact.
 
-import { TAGGED_CALLS, SLEEP_CALL } from './dsl.js';
+import { TAGGED_CALLS, SLEEP_CALL, LOOP_CALL } from './dsl.js';
 
 const NAME_START = /[A-Za-z_]/;
 const NAME_CHAR = /[A-Za-z0-9_]/;
@@ -110,11 +110,16 @@ function prevSig(toks, k) {
 
 const PAIR = { ')': '(', ']': '[', '}': '{' };
 
-function syntaxError(msg, src, offset) {
+// 1-based line of a character offset in the original source
+function lineAt(src, offset) {
   let line = 1;
   for (let i = 0; i < offset && i < src.length; i++) if (src[i] === '\n') line++;
+  return line;
+}
+
+function syntaxError(msg, src, offset) {
   const e = new Error(msg);
-  e.line = line;   // already a line in the ORIGINAL source, needs no remapping
+  e.line = lineAt(src, offset);   // already a line in the ORIGINAL source, needs no remapping
   return e;
 }
 
@@ -310,12 +315,21 @@ export function transform(src) {
 
     const isSleep = t.v === SLEEP_CALL;
     const isTagged = TAGGED_CALLS.includes(t.v);
-    if (!isSleep && !isTagged) continue;
+    const isLoop = t.v === LOOP_CALL;
+    if (!isSleep && !isTagged && !isLoop) continue;
+
+    const open = nextSig(toks, k);
+    const prev = prevSig(toks, k);
+
+    // A bare @live_loop, with no parentheses, still gets told its line.
+    if (isLoop && prev >= 0 && toks[prev].t === 'op' && toks[prev].v === '@'
+        && !(open >= 0 && toks[open].t === 'op' && toks[open].v === '(')) {
+      edits.push({ a: t.b, b: t.b, text: '(_line=' + lineAt(src, t.a) + ')' });
+      continue;
+    }
 
     // must be a call, and not an attribute access or a definition
-    const open = nextSig(toks, k);
     if (open < 0 || toks[open].t !== 'op' || toks[open].v !== '(') continue;
-    const prev = prevSig(toks, k);
     if (prev >= 0 && toks[prev].t === 'op' && toks[prev].v === '.') continue;
     if (prev >= 0 && toks[prev].t === 'name' && (toks[prev].v === 'def' || toks[prev].v === 'class')) continue;
 
@@ -331,7 +345,11 @@ export function transform(src) {
       const bare = last === open; // empty arg list
       const trailingComma = !bare && toks[last].t === 'op' && toks[last].v === ',';
       const sep = bare || trailingComma ? '' : ', ';
-      edits.push({ a: toks[close].a, b: toks[close].a, text: sep + '_loc=(' + t.a + ',' + toks[close].b + ')' });
+      // A loop learns its line, so a failure with no traceback (never
+      // sleeping, say) can still point somewhere. Everything else learns
+      // its character range, which is what the highlighter flashes.
+      const tag = isLoop ? '_line=' + lineAt(src, t.a) : '_loc=(' + t.a + ',' + toks[close].b + ')';
+      edits.push({ a: toks[close].a, b: toks[close].a, text: sep + tag });
     }
   }
 
@@ -384,4 +402,23 @@ export function programLine(traceback, lineOffset) {
   let m;
   while ((m = re.exec(traceback)) !== null) line = parseInt(m[1], 10);
   return line >= 1 ? Math.max(1, line - lineOffset) : -1;
+}
+
+// MicroPython's SyntaxError says only "invalid syntax". For the two slips
+// that account for most of them, say what was probably meant. Returns a
+// clause to append to the message, or '' when nothing is recognised.
+const BLOCK_HEAD = /^(def|class|if|elif|else|for|while|try|except|finally|with)\b/;
+
+export function syntaxHint(src, line) {
+  const lines = src.split('\n');
+  const cur = (lines[line - 1] || '').replace(/#.*$/, '').trimEnd();
+  const prev = (lines[line - 2] || '').replace(/#.*$/, '').trimEnd();
+  if (BLOCK_HEAD.test(cur.trim()) && !cur.endsWith(':')) {
+    return " - missing ':' at the end of the line?";
+  }
+  const indentOf = (s) => s.length - s.trimStart().length;
+  if (prev.endsWith(':') && cur.trim() && indentOf(cur) <= indentOf(prev)) {
+    return ' - the line after a \':\' has to be indented';
+  }
+  return '';
 }

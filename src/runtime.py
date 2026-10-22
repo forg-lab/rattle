@@ -42,6 +42,7 @@ class Task:
         self.bpm = 60.0
         self.synth = 'saw'
         self.seed = 1
+        self.line = -1      # where the live_loop was declared; -1 if unknown
         # Reading counts as of this task's last sleep. What makes hit()
         # idempotent: asking twice in one pass gives the same answer, because
         # the mark only moves when the thread does.
@@ -74,10 +75,13 @@ def _frontier():
     return f
 
 
-def _spawn(nm, fn, sync, delay):
+def _spawn(nm, fn, sync, delay, line=-1):
+    if not isinstance(nm, str):
+        raise TypeError("live_loop() name must be a string, like live_loop('drums')")
     tk = _TASKS.get(nm)
     if tk is not None and not tk.dead:
         tk.fn = fn                      # hot swap; current iteration finishes
+        tk.line = line
         if _CUR is not None:            # so editing a top-level use_bpm and
             tk.bpm = _CUR.bpm           # re-running actually retunes the loop
             tk.synth = _CUR.synth
@@ -95,6 +99,7 @@ def _spawn(nm, fn, sync, delay):
         # loop never emits into the past and lands in phase
         t0 = (int(_frontier() / spb) + 1) * spb
     tk = Task(nm, fn, t0 + delay * spb)
+    tk.line = line
     # derived from the spawning thread, so seeding at the top level makes the
     # whole piece reproducible, while the name keeps siblings independent
     tk.seed = _mix(nm, _CUR.seed if _CUR is not None else _BASE_SEED)
@@ -135,6 +140,16 @@ def _fail(task, e):
     _LOG.append('X|' + task.name + '|' + str(ln) + '|' + msg)
 
 
+def _die(task, msg):
+    # For a failure with no traceback to read: blame the loop's own line.
+    task.dead = True
+    _LOG.append('X|' + task.name + '|' + str(task.line) + '|' + msg)
+
+
+def _fmt(x):
+    return str(int(x)) if x == int(x) else str(x)
+
+
 def _step(task, horizon):
     global _CUR
     guard = 0
@@ -150,14 +165,11 @@ def _step(task, horizon):
         else:
             stall += 1
             if stall > 64:
-                task.dead = True
-                _LOG.append('X|' + task.name +
-                            '|-1|loop body never calls sleep() - it would run forever')
+                _die(task, 'loop body never calls sleep() - it would run forever')
                 return
         guard += 1
         if guard > 20000:
-            task.dead = True
-            _LOG.append('X|' + task.name + '|-1|scheduler bailed out')
+            _die(task, 'scheduler bailed out')
             return
         _CUR = task
         if task.gen is None:
@@ -185,7 +197,15 @@ def _step(task, horizon):
             return
         if d is None:
             d = 0.0
-        task.t += float(d) * (60.0 / task.bpm)
+        try:
+            d = float(d)
+        except (TypeError, ValueError):
+            _die(task, 'sleep() needs a number of beats, not ' + repr(d))
+            return
+        if d < 0:
+            _die(task, 'sleep(%s): can\'t sleep a negative number of beats' % _fmt(d))
+            return
+        task.t += d * (60.0 / task.bpm)
         task.mb_seen = dict(_MB_SEQ)
 
 
@@ -298,14 +318,14 @@ def _drain():
 
 # ---------------------------------------------------------------------- DSL
 
-def live_loop(name=None, sync=None, delay=0.0):
+def live_loop(name=None, sync=None, delay=0.0, _line=-1):
     if callable(name):
         fn = name
-        _spawn(fn.__name__, fn, None, 0.0)
+        _spawn(fn.__name__, fn, None, 0.0, _line)
         return fn
 
     def deco(fn):
-        _spawn(name if name else fn.__name__, fn, sync, delay)
+        _spawn(name if name else fn.__name__, fn, sync, delay, _line)
         return fn
     return deco
 
@@ -316,13 +336,21 @@ _NOTE_BASE = {'c': 0, 'd': 2, 'e': 4, 'f': 5, 'g': 7, 'a': 9, 'b': 11}
 def note(s):
     if isinstance(s, (int, float)):
         return s
+    bad = ValueError("not a note: %r (try 'c4', 'fs3' or 'eb5', or a midi number)" % (s,))
+    if not isinstance(s, str):
+        raise bad
     s = s.strip().lower()
+    if not s or s[0] not in _NOTE_BASE:
+        raise bad
     v = _NOTE_BASE[s[0]]
     i = 1
     while i < len(s) and s[i] in 'sb#f':
         v += 1 if s[i] in 's#' else -1
         i += 1
-    octv = int(s[i:]) if i < len(s) else 4
+    try:
+        octv = int(s[i:]) if i < len(s) else 4
+    except ValueError:
+        raise bad
     return v + (octv + 1) * 12
 
 

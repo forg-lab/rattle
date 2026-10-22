@@ -6,7 +6,7 @@
 // that turns a traceback into a line number is a chance to be off by one or
 // to blame a line the user never wrote. These tests pin each path down.
 
-import { transform, programLine } from '../src/transform.js';
+import { transform, programLine, syntaxHint } from '../src/transform.js';
 import { micropython, load, ok, report } from './lib.mjs';
 
 const { mp, runtime } = await micropython();
@@ -161,6 +161,65 @@ const unterminated = transformError('x = 1\ny = 2\nz = "oops\n');
 ok(unterminated && unterminated.line === 3, 'unterminated string: its own line', JSON.stringify(unterminated));
 const stray = transformError('x = 1\n)\n');
 ok(stray && stray.line === 2, 'stray closer: its own line', JSON.stringify(stray));
+
+// ------------------------------------------------------ what the message says
+// A traceback's own wording is often about the runtime's insides. The
+// mistakes a player actually makes get told in the player's terms.
+
+dies('bad note name', 'play("h")\n', 1,
+  { text: "ValueError: not a note: 'h' (try 'c4', 'fs3' or 'eb5', or a midi number)" });
+dies('bad octave', 'play("c4x")\n', 1,
+  { text: "ValueError: not a note: 'c4x' (try 'c4', 'fs3' or 'eb5', or a midi number)" });
+dies('loop named with a number', '@live_loop(1)\ndef a():\n    sleep(1)\n', 1,
+  { text: "TypeError: live_loop() name must be a string, like live_loop('drums')" });
+
+// Failures with no traceback to read point at the loop they happened in.
+dies('loop that never sleeps blames its own line', `use_bpm(60)
+@live_loop("a")
+def a():
+    play(60)
+`, 2, { task: 'a', text: 'loop body never calls sleep() - it would run forever' });
+dies('bare @live_loop that never sleeps, same', `use_bpm(60)
+@live_loop
+def a():
+    play(60)
+`, 2, { task: 'a' });
+dies('sleep with a string', `@live_loop("a")
+def a():
+    sleep("x")
+`, 1, { task: 'a', text: "sleep() needs a number of beats, not 'x'" });
+dies('sleep with a list', `@live_loop("a")
+def a():
+    sleep([1])
+`, 1, { task: 'a', text: 'sleep() needs a number of beats, not [1]' });
+dies('negative sleep', `@live_loop("a")
+def a():
+    sleep(-1)
+`, 1, { task: 'a', text: "sleep(-1): can't sleep a negative number of beats" });
+
+{
+  // One loop's bad sleep must not take the others down with it.
+  const r = run(`@live_loop("a")
+def a():
+    sleep([1])
+@live_loop("b")
+def b():
+    play(60)
+    sleep(1)
+`);
+  ok(!r.threw && r.errors.length === 1 && r.errors[0].task === 'a',
+    'a bad sleep kills only its own loop', r.threw ? 'scheduler threw' : JSON.stringify(r.errors));
+}
+
+// Hints for the syntax errors MicroPython reports as just "invalid syntax".
+ok(syntaxHint('x = 1\ndef a()\n    play(60)\n', 2).includes("missing ':'"), 'hint: def without a colon');
+ok(syntaxHint('for i in range(4)\n    play(60)\n', 1).includes("missing ':'"), 'hint: for without a colon');
+ok(syntaxHint('if x:\n    play(60)\nelse\n    play(62)\n', 3).includes("missing ':'"), 'hint: else without a colon');
+ok(syntaxHint('def a():\nplay(60)\n', 2).includes('has to be indented'), 'hint: body not indented');
+ok(syntaxHint('def a():  # comment\nplay(60)\n', 2).includes('has to be indented'), 'hint: body not indented, comment after the colon');
+ok(syntaxHint('x = = 1\n', 1) === '', 'hint: nothing to say about a plain slip');
+ok(syntaxHint('def a():\n    play(60)\n', 2) === '', 'hint: an indented body is not flagged');
+ok(syntaxHint('x = 1\ny = = 2\n', 2) === '', 'hint: a plain line after a plain line');
 
 // ------------------------------------------------------ the parser itself
 // programLine is what the worker runs over a compile error. It must ignore

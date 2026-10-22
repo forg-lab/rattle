@@ -3,7 +3,7 @@
 // which is what bounds how far ahead of real time the Python may run.
 
 import runtimeSrc from './runtime.py?raw';
-import { transform, programLine } from './transform.js';
+import { transform, programLine, syntaxHint } from './transform.js';
 
 const LOOKAHEAD = 0.25;   // seconds of run-ahead
 const WAIT_MS = 60;       // cap on a single park, so we never wedge
@@ -109,7 +109,8 @@ self.onmessage = (ev) => {
       postMessage({ type: 'ok', loops: mp.globals.get('_LOOPS') || '' });
     } catch (e) {
       const { line, text } = pyError(e);
-      postMessage({ type: 'error', line, text });
+      const hint = line >= 1 && text.startsWith('SyntaxError') ? syntaxHint(msg.code, line) : '';
+      postMessage({ type: 'error', line, text: text + hint });
       return;
     }
     stopped = false;
