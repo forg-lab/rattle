@@ -86,7 +86,7 @@ async function film(browser, name) {
     '-i', video, '-itsoffset', gap.toFixed(3), '-i', audio,
     '-map', '0:v', '-map', '1:a',
     '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p',
-    '-vf', 'scale=trunc(iw/2)*2:trunc(ih/2)*2',
+    '-vf', `scale=${WIDTH}:-2`,
     '-c:a', 'aac', '-b:a', '192k', '-shortest', out,
   ]);
   fs.unlinkSync(video);

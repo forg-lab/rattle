@@ -53,9 +53,10 @@ export function installAutoplay({ view, run, stop, engine, setViz, setCodeFade, 
     }
   }
 
-  async function perform(name, { speed = 1 } = {}) {
+  async function perform(name, opts = {}) {
     const play = PLAYS[name];
     if (!play) throw new Error('no such play: ' + name + ' (have ' + Object.keys(PLAYS).join(', ') + ')');
+    const speed = (opts.speed || 1) * (play.speed || 1);
     view.focus();
     for (const step of play.steps) {
       if (!playing) return;
@@ -85,8 +86,11 @@ export function installAutoplay({ view, run, stop, engine, setViz, setCodeFade, 
         press('run');
         run();
         await sleep(150 / speed);
+      } else if (step.type === 'stop') {
+        press('stop');
+        stop();
       } else if (step.type === 'wait') {
-        await sleep(step.ms / speed);
+        await sleep(step.ms);   // listening time is not typing time
       }
     }
   }
