@@ -30,6 +30,7 @@ export class Engine {
     comp.threshold.value = -12;
     comp.ratio.value = 4;
     this.master.connect(comp).connect(this.ctx.destination);
+    this.out = comp;    // the last node before the speakers, for a recorder to tap
 
     // one shared reverb bus
     this.verb = this.ctx.createConvolver();

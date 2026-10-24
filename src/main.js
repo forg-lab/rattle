@@ -20,6 +20,7 @@ import { Visuals } from './visuals.js';
 import { dslHover } from './hover.js';
 import { getPref, setPref } from './prefs.js';
 import { savedLesson, saveLesson, forgetLesson, openLesson, lastLesson } from './lessons.js';
+import { installAutoplay } from './autoplay.js';
 import './style.css';
 
 const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || '');
@@ -803,3 +804,10 @@ if (import.meta.env.DEV) window.__rattle = { view, engine, visuals, run, stop, w
 // CodeMirror's Mod- prefix already resolves to Ctrl off macOS; the labels did not.
 document.getElementById('kbd-run').textContent = isMac ? '\u2318\u23CE' : 'Ctrl+\u23CE';
 document.getElementById('kbd-stop').textContent = isMac ? '\u2318.' : 'Ctrl+.';
+
+// Scripted performances, for filming and for ?play=<name>.
+installAutoplay({
+  view, run, stop, engine, setViz, say,
+  setCodeFade: (pct) => { codeOpacity.value = String(pct); applyCodeOpacity(); },
+  isReady: () => ready,
+});

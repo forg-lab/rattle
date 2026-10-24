@@ -450,3 +450,6 @@ body.log-min #mb-panel { display: none; }
 }
 .mb-val { flex: 0 0 32px; text-align: right; color: var(--accent); }
 .mb-n { flex: 0 0 38px; text-align: right; opacity: .55; }
+
+/* a button pressed by a scripted performance (autoplay.js) */
+button.pressed { filter: brightness(1.6); transform: translateY(1px); }
