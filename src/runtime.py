@@ -15,6 +15,10 @@ _TASKS = {}
 _ORDER = []
 _CUR = None
 _NOW = 0.0
+# Where beat 0 is, in seconds: the moment the first loop started on an empty
+# stage. Beats are counted from here, so every(4) means "every four beats since
+# the music started", not since the audio clock happened to read zero.
+_ORIGIN = 0.0
 _RUN = 0        # bumped each Run, so the UI can discard records from the last one
 
 MAIN = '__main__'
@@ -43,6 +47,10 @@ class Task:
         self.synth = 'saw'
         self.seed = 1
         self.line = -1      # where the live_loop was declared; -1 if unknown
+        # The loop this one is synced to, until that loop starts its next pass
+        # and lets this one go. None for a loop that is free to run.
+        self.wait = None
+        self.lag = 0.0      # seconds after that pass to start: live_loop's delay
         # Reading counts as of this task's last sleep. What makes hit()
         # idempotent: asking twice in one pass gives the same answer, because
         # the mark only moves when the thread does.
@@ -55,7 +63,8 @@ def _prime(now):
 
 
 def _reset():
-    global _CUR, _EV
+    global _CUR, _EV, _ORIGIN
+    _ORIGIN = 0.0
     _SLIDERS.clear()
     _SLIDER_AUTO.clear()
     _TASKS.clear()
@@ -76,6 +85,7 @@ def _frontier():
 
 
 def _spawn(nm, fn, sync, delay, line=-1):
+    global _ORIGIN
     if not isinstance(nm, str):
         raise TypeError("live_loop() name must be a string, like live_loop('drums')")
     tk = _TASKS.get(nm)
@@ -87,19 +97,29 @@ def _spawn(nm, fn, sync, delay, line=-1):
             tk.synth = _CUR.synth
         return
     spb = 60.0 / (_CUR.bpm if _CUR is not None else 60.0)
-    if sync is not None:
-        st = _TASKS.get(sync)
-        t0 = st.t if (st is not None and not st.dead) else _frontier()
+    st = _TASKS.get(sync) if sync is not None else None
+    if st is not None and not st.dead:
+        # Parked until sync begins its next pass, which is where its phase
+        # is. Its next event would only be in phase for a loop that plays
+        # once per pass; a drum pattern's next hit may be mid-bar.
+        t0 = st.t
+    elif sync is not None:
+        t0 = _frontier()
     elif _frontier() <= _NOW + 1e-6:
         # nothing else is playing, so there is no phase to respect: start now
-        # rather than making the user wait out a beat of silence
+        # rather than making the user wait out a beat of silence, and count
+        # beats from here
         t0 = _NOW
+        _ORIGIN = t0
     else:
         # start on the next beat past everything already scheduled, so a new
         # loop never emits into the past and lands in phase
         t0 = (int(_frontier() / spb) + 1) * spb
     tk = Task(nm, fn, t0 + delay * spb)
     tk.line = line
+    if st is not None and not st.dead:
+        tk.wait = sync
+        tk.lag = delay * spb
     # derived from the spawning thread, so seeding at the top level makes the
     # whole piece reproducible, while the name keeps siblings independent
     tk.seed = _mix(nm, _CUR.seed if _CUR is not None else _BASE_SEED)
@@ -136,6 +156,7 @@ def _exc(e):
 
 def _fail(task, e):
     task.dead = True
+    _release(task, max(task.t, _NOW))
     ln, msg = _exc(e)
     _LOG.append('X|' + task.name + '|' + str(ln) + '|' + msg)
 
@@ -143,6 +164,7 @@ def _fail(task, e):
 def _die(task, msg):
     # For a failure with no traceback to read: blame the loop's own line.
     task.dead = True
+    _release(task, max(task.t, _NOW))
     _LOG.append('X|' + task.name + '|' + str(task.line) + '|' + msg)
 
 
@@ -155,7 +177,7 @@ def _step(task, horizon):
     guard = 0
     stall = 0
     last = task.t
-    while task.t < horizon and not task.dead:
+    while task.t < horizon and not task.dead and task.wait is None:
         # A loop that never sleeps would spin forever. Detect it by lack of
         # progress on the logical clock rather than by raw iteration count, so
         # a legitimately fast loop is never falsely accused.
@@ -173,6 +195,7 @@ def _step(task, horizon):
             return
         _CUR = task
         if task.gen is None:
+            _release(task)
             try:
                 r = task.fn()
             except Exception as e:
@@ -209,14 +232,35 @@ def _step(task, horizon):
         task.mb_seen = dict(_MB_SEQ)
 
 
+def _release(task, t=None):
+    # A new pass of task is starting at task.t: whatever was synced to it
+    # starts there too, delayed by its own delay if it asked for one. Also
+    # called when task dies, so nothing waits forever on a loop that is gone.
+    global _RELEASED
+    for nm in _ORDER:
+        w = _TASKS.get(nm)
+        if w is not None and w.wait == task.name:
+            w.wait = None
+            w.t = (task.t if t is None else t) + w.lag
+            _RELEASED = True
+
+
+_RELEASED = False
+
+
 def _run_until(now, horizon):
-    global _NOW, _CUR
+    global _NOW, _CUR, _RELEASED
     _NOW = now
-    for nm in list(_ORDER):
-        tk = _TASKS.get(nm)
-        if tk is None or tk.dead:
-            continue
-        _step(tk, horizon)
+    # A loop released by one later in the order gets its turn in the same
+    # pass, rather than a poll late.
+    _RELEASED = True
+    while _RELEASED:
+        _RELEASED = False
+        for nm in list(_ORDER):
+            tk = _TASKS.get(nm)
+            if tk is None or tk.dead:
+                continue
+            _step(tk, horizon)
     _CUR = None
 
 
@@ -271,7 +315,7 @@ def _headroom(now):
     h = None
     for nm in _ORDER:
         tk = _TASKS.get(nm)
-        if tk is not None and not tk.dead:
+        if tk is not None and not tk.dead and tk.wait is None:
             if h is None or tk.t < h:
                 h = tk.t
     return 0.0 if h is None else h - now
@@ -566,7 +610,7 @@ def choose(seq):
 
 
 def _beats():
-    return _CUR.t * (_CUR.bpm / 60.0)
+    return (_CUR.t - _ORIGIN) * (_CUR.bpm / 60.0)
 
 
 def _val(x):
@@ -689,7 +733,9 @@ def seq(values, step=1.0):
     nums = [x for x in xs if isinstance(x, (int, float))]
     lo = min(nums) if nums else None
     hi = max(nums) if nums else None
-    return Signal(lambda t: xs[int(t / step) % len(xs)], lo, hi)
+    # The beat clock is a sum of float sleeps, so it can land a hair short of
+    # a step boundary; the same tolerance every() uses keeps that on its step.
+    return Signal(lambda t: xs[int(math.floor(t / step + 1e-6)) % len(xs)], lo, hi)
 
 
 def hold(value):
