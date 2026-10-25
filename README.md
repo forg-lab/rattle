@@ -148,7 +148,12 @@ location; the mark clears on the next clean run, which logs
 `✓ code updated · loops: …`.
 
 Line numbers come back from MicroPython pointing into the *transformed* source,
-so the worker maps them back (`toUserLine`) before anything sees them.
+which has a `def __main__():` line and sometimes a `global` line above what you
+typed. The program is compiled under its own filename, so the runtime can tell
+its frames from `runtime.py`'s, and `_exc` blames the innermost frame that is
+in your code, shifted back by however many lines the transform added. An error
+raised inside `play()` by a bad argument points at the call, not at the
+runtime. `test/errors.mjs` pins every path down.
 
 Unbalanced brackets are caught in `transform.js` rather than by Python, because
 the parser reports where it finally gave up — often several lines below the
