@@ -161,4 +161,85 @@ def hats():
   ok(amps.length > 500 && wrong === 0, 'seq() steps with the loop, never a step behind', `${wrong} of ${amps.length} off`);
 }
 
+// ------------------------------------ beat() is exact, at awkward tempos
+for (const [bpm, start] of [[100, -0.08], [100, 37.4], [90, -0.08]]) {
+  const ev = session([[start, `use_bpm(${bpm})
+
+@live_loop("k")
+def k():
+    b = beat() % 4
+    sample("bd", amp=1 if b == 0 else (0.7 if b == 2 else 0.5))
+    sleep(1)
+`]], start + 128 * 60 / bpm);
+  const amps = ev.filter((e) => e.kind === 'sample').map((e) => +e.kv.amp);
+  const wrong = amps.filter((a, i) => a !== [1, 0.5, 0.7, 0.5][i % 4]).length;
+  ok(amps.length > 100 && wrong === 0, `beat() % 4 == n holds exactly at bpm ${bpm} from t=${start}`, `${wrong} of ${amps.length} off`);
+}
+
+// ------------------------------ a tempo change keeps every loop in the bar
+{
+  const prog = (bpm, extra = '') => `use_bpm(${bpm})
+
+@live_loop("k")
+def k():
+    sample("bd", amp=1 if every(4) else 0.5)
+    sleep(1)
+` + extra;
+  const ev = session([[-0.08, prog(60)], [5.5, prog(100)], [11.3, prog(100, `
+@live_loop("h")
+def h():
+    sample("hat", amp=1 if every(4) else 0.5)
+    sleep(1)
+`)]], 22);
+  const kick = ev.filter((e) => e.kind === 'sample' && e.kv.name === 'bd');
+  const hat = ev.filter((e) => e.kind === 'sample' && e.kv.name === 'hat');
+  const accents = kick.map((e) => +e.kv.amp === 1 ? 'X' : '.').join('');
+  ok(/^(X\.\.\.)+X?\.{0,3}$/.test(accents), 'every(4) keeps the bar through a tempo change', accents);
+  const loud = new Set(kick.filter((e) => +e.kv.amp === 1).map((e) => e.t.toFixed(4)));
+  const hatLoud = hat.filter((e) => +e.kv.amp === 1);
+  ok(hat.length > 4 && hatLoud.length > 0 && hatLoud.every((e) => loud.has(e.t.toFixed(4))),
+    'a loop added after the change agrees with the others about the bar', hatLoud.map((e) => e.t.toFixed(2)).join(' '));
+}
+
+// --------------------- a program's own names do not outlive it past Stop
+{
+  session([[0, `@live_loop("beat")
+def beat():
+    sample("bd")
+    sleep(1)
+`]], 2);
+  const ev = session([[0, `@live_loop("k")
+def k():
+    sample("bd", amp=1 if beat() % 4 == 0 else 0.5)
+    sleep(1)
+`]], 3);
+  ok(!errs(ev) && ev.some((e) => e.kind === 'sample'), 'a loop named beat does not break beat() for the next program', errs(ev));
+}
+
+// ------------------------------------- a pass that never sleeps stops at once
+{
+  const ev = session([[0, `@live_loop("k")
+def k():
+    sample("bd")
+`]], 2);
+  const n = ev.filter((e) => e.kind === 'sample').length;
+  ok(/never calls sleep/.test(errs(ev)) && n <= 1, 'a body with no sleep stops after one pass, not a burst of hits', `${n} hits; ${errs(ev)}`);
+}
+{
+  const ev = session([[0, `@live_loop("k")
+def k():
+    sample("bd")
+    sleep(1)
+
+@live_loop("pad")
+def pad():
+    if every(8):
+        play(60)
+        sleep(4)
+`]], 4);
+  const e = ev.find((x) => x.err && x.err.startsWith('pad'));
+  ok(e && /didn't sleep/.test(e.err), 'a pass that skips its sleep under an if is reported', e && e.err);
+  ok(ev.filter((x) => x.kind === 'sample').length >= 3, 'and the other loop plays on');
+}
+
 report('clock');

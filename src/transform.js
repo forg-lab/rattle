@@ -304,6 +304,46 @@ export function topLevelBindings(src, toks) {
   return [...out];
 }
 
+// sleep() becomes a yield, and a yield belongs to the innermost function. In
+// a live_loop that is the loop body, as intended; in a helper it silently
+// turns the helper into a generator, which then plays at most one note and
+// returns no list. Say so at compile time instead. Walks back from the sleep
+// through the statements that enclose it, by indentation, to the nearest def.
+function checkSleepPlacement(src, toks, sleepTok) {
+  // logical lines: the first token of each line outside any bracket
+  const starts = [];
+  let depth = 0;
+  let atLineStart = true;
+  for (const t of toks) {
+    if (t.t === 'nl') { if (depth === 0) atLineStart = true; continue; }
+    if (t.t === 'comment') continue;
+    if (atLineStart && depth === 0) {
+      starts.push(t);
+      atLineStart = false;
+    }
+    if (t.t === 'op' && '([{'.includes(t.v)) depth++;
+    else if (t.t === 'op' && ')]}'.includes(t.v)) depth = Math.max(0, depth - 1);
+  }
+  const col = (t) => t.a - (src.lastIndexOf('\n', t.a - 1) + 1);
+  let i = starts.length - 1;
+  while (i >= 0 && starts[i].a > sleepTok.a) i--;
+  if (i < 0) return;
+  let indent = col(starts[i]);
+  for (let j = i - 1; j >= 0 && indent > 0; j--) {
+    const c = col(starts[j]);
+    if (c >= indent) continue;
+    indent = c;
+    if (starts[j].v !== 'def') continue;
+    // decorators sit directly above, at the same indentation
+    for (let k = j - 1; k >= 0 && col(starts[k]) === c && starts[k].v === '@'; k--) {
+      const line = src.slice(starts[k].a, src.indexOf('\n', starts[k].a) >>> 0);
+      if (new RegExp('\\b' + LOOP_CALL + '\\b').test(line)) return;
+    }
+    const name = (/def\s+([A-Za-z_]\w*)/.exec(src.slice(starts[j].a)) || [])[1] || 'this function';
+    throw syntaxError(name + "() isn't a live_loop, so it can't sleep - return the notes and sleep in the loop", src, sleepTok.a);
+  }
+}
+
 export function transform(src) {
   const toks = tokenize(src);
   checkBalance(toks, src);
@@ -337,6 +377,7 @@ export function transform(src) {
     if (close < 0) continue;
 
     if (isSleep) {
+      checkSleepPlacement(src, toks, t);
       const args = src.slice(toks[open].b, toks[close].a);
       const inner = args.trim() === '' ? '0' : args;
       edits.push({ a: t.a, b: toks[close].b, text: '(yield (' + inner + '))' });

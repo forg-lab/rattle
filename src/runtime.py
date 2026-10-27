@@ -30,10 +30,19 @@ _PROG = '<program>'
 _LINE_OFF = 0
 
 
+# The program's own namespace: a copy of this module's, made on the first Run
+# and dropped on Stop. A program that defines its own beat() or play() then
+# shadows them for itself only, not for the runtime or the next program.
+_USER = None
+
+
 def _load(src, line_off):
-    global _LINE_OFF
+    global _LINE_OFF, _USER
     _LINE_OFF = line_off
-    exec(compile(src, _PROG, 'exec'), globals())
+    if _USER is None:
+        _USER = dict(globals())
+    exec(compile(src, _PROG, 'exec'), _USER)
+    globals()['__main__'] = _USER['__main__']
 
 
 class Task:
@@ -51,6 +60,11 @@ class Task:
         # and lets this one go. None for a loop that is free to run.
         self.wait = None
         self.lag = 0.0      # seconds after that pass to start: live_loop's delay
+        # This thread's position in its own beats, counted as it sleeps rather
+        # than derived from seconds, so a tempo change keeps its place in the
+        # bar. None for the main thread, which falls back to seconds.
+        self.beats = None
+        self.pass_t = 0.0   # where the current pass began, to catch one that never sleeps
         # Reading counts as of this task's last sleep. What makes hit()
         # idempotent: asking twice in one pass gives the same answer, because
         # the mark only moves when the thread does.
@@ -63,8 +77,9 @@ def _prime(now):
 
 
 def _reset():
-    global _CUR, _EV, _ORIGIN
+    global _CUR, _EV, _ORIGIN, _USER
     _ORIGIN = 0.0
+    _USER = None
     _SLIDERS.clear()
     _SLIDER_AUTO.clear()
     _TASKS.clear()
@@ -105,18 +120,26 @@ def _spawn(nm, fn, sync, delay, line=-1):
         t0 = st.t
     elif sync is not None:
         t0 = _frontier()
+        b0 = _beats_at(t0)[0]
     elif _frontier() <= _NOW + 1e-6:
         # nothing else is playing, so there is no phase to respect: start now
         # rather than making the user wait out a beat of silence, and count
         # beats from here
         t0 = _NOW
         _ORIGIN = t0
+        b0 = 0.0
     else:
         # start on the next beat past everything already scheduled, so a new
-        # loop never emits into the past and lands in phase
-        t0 = (int(_frontier() / spb) + 1) * spb
+        # loop never emits into the past and lands in phase - the next beat
+        # as the loops already playing count it
+        f = _frontier()
+        bf, ref_bpm = _beats_at(f)
+        b0 = math.floor(bf + 1e-6) + 1.0
+        t0 = f + (b0 - bf) * 60.0 / ref_bpm
     tk = Task(nm, fn, t0 + delay * spb)
     tk.line = line
+    if not (st is not None and not st.dead):
+        tk.beats = b0 + delay
     if st is not None and not st.dead:
         tk.wait = sync
         tk.lag = delay * spb
@@ -128,6 +151,17 @@ def _spawn(nm, fn, sync, delay, line=-1):
         tk.synth = _CUR.synth
     _TASKS[nm] = tk
     _ORDER.append(nm)
+
+
+def _beats_at(t):
+    # Beats at time t, as a loop already playing counts them, and the tempo
+    # it counts at. With none playing, beats since the origin at this tempo.
+    for nm in _ORDER:
+        tk = _TASKS.get(nm)
+        if tk is not None and not tk.dead and tk.wait is None and tk.beats is not None:
+            return tk.beats + (t - tk.t) * (tk.bpm / 60.0), tk.bpm
+    bpm = _CUR.bpm if _CUR is not None else 60.0
+    return (t - _ORIGIN) * (bpm / 60.0), bpm
 
 
 def _exc(e):
@@ -203,17 +237,25 @@ def _step(task, horizon):
                 return
             if hasattr(r, 'send'):
                 task.gen = r
+                task.pass_t = task.t
             else:
                 if task.name == MAIN:
                     task.dead = True
                     return
-                continue
+                # Stop at once: going round again would play the same notes
+                # at the same instant, dozens at a time, before it was caught.
+                _die(task, 'loop body never calls sleep() - it would run forever')
+                return
         try:
             d = next(task.gen)
         except StopIteration:
             task.gen = None
             if task.name == MAIN:
                 task.dead = True
+            elif task.t == task.pass_t:
+                # sleeps on some paths but not this one, e.g. under an if
+                _die(task, "this pass didn't sleep - every way through a live_loop needs a sleep()")
+                return
             continue
         except Exception as e:
             _fail(task, e)
@@ -229,6 +271,8 @@ def _step(task, horizon):
             _die(task, 'sleep(%s): can\'t sleep a negative number of beats' % _fmt(d))
             return
         task.t += d * (60.0 / task.bpm)
+        if task.beats is not None:
+            task.beats += d
         task.mb_seen = dict(_MB_SEQ)
 
 
@@ -241,6 +285,10 @@ def _release(task, t=None):
         w = _TASKS.get(nm)
         if w is not None and w.wait == task.name:
             w.wait = None
+            tb = task.beats if task.beats is not None else _beats_at(task.t)[0]
+            if t is not None:
+                tb += (t - task.t) * (task.bpm / 60.0)
+            w.beats = tb + w.lag * (w.bpm / 60.0)
             w.t = (task.t if t is None else t) + w.lag
             _RELEASED = True
 
@@ -610,7 +658,14 @@ def choose(seq):
 
 
 def _beats():
-    return (_CUR.t - _ORIGIN) * (_CUR.bpm / 60.0)
+    b = _CUR.beats
+    if b is None:
+        b = (_CUR.t - _ORIGIN) * (_CUR.bpm / 60.0)
+    # A sum of float sleeps lands a hair off the grid - 2.0000000000000004 -
+    # and beat() % 4 == 2 should still mean what it says. Snap to a fine
+    # grid when within float noise of it.
+    r = round(b * 960) / 960
+    return r if abs(b - r) < 1e-6 else b
 
 
 def _val(x):

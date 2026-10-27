@@ -233,4 +233,13 @@ ok(programLine('  File "<stdin>", line 7, in <module>\nRuntimeError: no program 
 ok(programLine('  File "<program>", line 3, in __main__\n  File "<program>", line 9, in h\nZeroDivisionError\n', 1) === 8,
   'programLine: innermost program frame wins');
 
+// sleep() in a helper would silently make it a generator; say so up front
+const helper = transformError('def arp(root):\n    play(root)\n    sleep(1)\n    return [root]\n');
+ok(helper && helper.line === 3 && /arp\(\) isn't a live_loop/.test(helper.text),
+  'sleep in a helper function: named, at the sleep', JSON.stringify(helper));
+ok(transformError('@live_loop("a")\ndef a():\n    for i in range(2):\n        sleep(1)\n') === null
+  && transformError('sleep(1)\nfor i in range(2):\n    sleep(1)\n') === null
+  && transformError('@live_loop("b",\n           sync="a")\ndef b():\n    sleep(1)\n') === null,
+  'sleep in a live_loop, nested in its blocks, or at the top level is fine');
+
 report();
