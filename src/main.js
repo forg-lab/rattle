@@ -19,6 +19,7 @@ import { Engine } from './audio.js';
 import { Visuals } from './visuals.js';
 import { dslHover } from './hover.js';
 import { getPref, setPref } from './prefs.js';
+import { savedLesson, saveLesson, forgetLesson, openLesson, lastLesson } from './lessons.js';
 import './style.css';
 
 const isMac = /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent || '');
@@ -35,7 +36,26 @@ const DEMOS = Object.keys(demoModules).sort().map((path) => {
   };
 });
 
-const DEFAULT = DEMOS.length ? DEMOS[0].code : '# no demos found\n';
+// The tutorial: numbered lessons, meant to be worked through in order, so
+// they keep their numbers in the menu ("3 for loops"), and each one keeps the
+// student's edits (lessons.js).
+const lessonModules = import.meta.glob('../tutorial/*.py', { query: '?raw', import: 'default', eager: true });
+
+const LESSONS = Object.keys(lessonModules).sort().map((path) => {
+  const file = path.split('/').pop().replace(/\.py$/, '');
+  return {
+    file: 'tutorial/' + file,
+    label: file.replace(/^0*(\d+)[-_]?/, '$1 ').replace(/[-_]/g, ' '),
+    code: lessonModules[path],
+    lesson: true,
+  };
+});
+
+const findPiece = (file) => LESSONS.find((x) => x.file === file) || DEMOS.find((x) => x.file === file);
+
+// A student who reloads mid-tutorial comes back to their lesson.
+let current = findPiece(lastLesson()) || DEMOS[0] || null;
+const DEFAULT = current ? (current.lesson && savedLesson(current.file)) || current.code : '# no demos found\n';
 
 // ---------------------------------------------------------------- highlight
 
@@ -465,6 +485,7 @@ let hasRun = false;
 let runId = 0;
 
 function run() {
+  keepLesson();
   if (!ready) { say('still booting MicroPython…', 'warn'); return; }
   if (!started) { engine.start(); started = true; }
   engine.ctx.resume();
@@ -715,24 +736,66 @@ codeOpacity.addEventListener('pointerup', () => view.focus());
 applyCodeOpacity();
 
 const demoSel = document.getElementById('demo');
-for (const d of DEMOS) {
-  const o = document.createElement('option');
-  o.value = d.file;
-  o.textContent = d.label;
-  demoSel.append(o);
+const RESET = '__reset';
+function menuGroup(label, pieces) {
+  const g = document.createElement('optgroup');
+  g.label = label;
+  for (const d of pieces) {
+    const o = document.createElement('option');
+    o.value = d.file;
+    o.textContent = d.label;
+    g.append(o);
+  }
+  demoSel.append(g);
+  return g;
 }
-demoSel.onchange = () => {
-  const d = DEMOS.find((x) => x.file === demoSel.value);
-  if (!d) return;
+if (LESSONS.length) {
+  const g = menuGroup('tutorial', LESSONS);
+  const o = document.createElement('option');
+  o.value = RESET;
+  o.textContent = '\u21BA reset this lesson';
+  g.append(o);
+}
+menuGroup('demos', DEMOS);
+if (current) demoSel.value = current.file;
+
+// Save the open lesson's text: on Run, before leaving it, every few seconds,
+// and when the page goes away.
+function keepLesson() {
+  if (current && current.lesson) saveLesson(current.file, view.state.doc.toString(), current.code);
+}
+setInterval(keepLesson, 5000);
+addEventListener('pagehide', keepLesson);
+
+function load(piece, text) {
   // Stop first. A live_loop the buffer no longer mentions keeps playing — that
   // is the right call while performing, but picking a demo means replacing the
   // piece, not layering it on the last one.
   stop();
   openNav(false);
-  view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: d.code } });
+  current = piece;
+  openLesson(piece.lesson ? piece.file : null);
+  demoSel.value = piece.file;
+  view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
   logEl.innerHTML = '';
   run();
   view.focus();
+}
+
+demoSel.onchange = () => {
+  if (demoSel.value === RESET) {
+    if (!current) return;
+    forgetLesson(current.file);
+    load(current, current.code);
+    say('back to the original ' + (current.lesson ? 'lesson' : 'demo'), 'ok');
+    return;
+  }
+  const d = findPiece(demoSel.value);
+  if (!d) return;
+  keepLesson();
+  const saved = d.lesson ? savedLesson(d.file) : null;
+  load(d, saved || d.code);
+  if (saved) say('your edits to this lesson are back - "reset this lesson" in the menu starts it over', 'ok');
 };
 
 if (import.meta.env.DEV) window.__rattle = { view, engine, visuals, run, stop, worker, setViz };
