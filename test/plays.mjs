@@ -21,6 +21,10 @@ function states(steps) {
       const at = doc.indexOf(s.find);
       if (at < 0) throw new Error(`edit: "${s.find}" is not in the buffer`);
       doc = doc.slice(0, at) + s.with + doc.slice(at + s.find.length);
+    } else if (s.type === 'insert') {
+      const at = doc.indexOf(s.find);
+      if (at < 0) throw new Error(`insert: "${s.find}" is not in the buffer`);
+      doc = doc.slice(0, at) + s.text + doc.slice(at);
     } else if (s.type === 'run') out.push(doc);
   }
   return out;

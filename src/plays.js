@@ -7,6 +7,7 @@
 //   type(text)        type at the cursor, character by character
 //   add(text)         jump to the end of the buffer, then type
 //   edit(find, with)  select the first occurrence of `find`, type over it
+//   insert(find, text) put the cursor before the first `find`, type there
 //   run()             press Run
 //   wait(ms)          let it play
 //   stop()            press Stop
@@ -19,6 +20,7 @@
 const type = (text) => ({ type: 'type', text });
 const add = (text) => ({ type: 'add', text });
 const edit = (find, with_) => ({ type: 'edit', find, with: with_ });
+const insert = (find, text) => ({ type: 'insert', find, text });
 const run = () => ({ type: 'run' });
 const stop = () => ({ type: 'stop' });
 const wait = (ms) => ({ type: 'wait', ms });
@@ -146,91 +148,82 @@ def bass():
     ],
   },
 
-  // Three clocks that do not share a bar - a 12/8 bell, 4/4 drums and a 7/8
-  // bass - under a drone tuned in just intonation and a voice in a scale with
-  // quarter-tones. Nothing here needs a piano's tuning or a drummer's bar line;
-  // the language only asks for numbers, so the numbers can come from anywhere.
-  'three-clocks': {
-    title: 'three clocks',
-    speed: 1.8,
+  // Everything grows from one 12-pulse cycle and one pitch. The drums are
+  // strings you can read as a bar - the bell is the West African standard
+  // pattern, seven strokes in twelve - and every other loop syncs to the top
+  // of that bar. The drone is open fifths with no third, so the only third in
+  // the piece is the voice's: Arab rast's neutral third, 3.5 semitones, which
+  // sits between the piano's keys. Built up, then taken apart in the order it
+  // arrived, down to the single bell stroke it started from.
+  'one-bell': {
+    title: 'one bell',
+    speed: 2.2,
     steps: [
-      clear(),
-      viz(true, 85),
-      // a drone from ratios, not from a keyboard: 1, 3/2, 5/2, 3 - the chord
-      // the harmonic series gives, which the piano can only approximate
-      type(`import math
-use_bpm(126)
-d = note("d2")
-ji = lambda r: d + 12 * math.log2(r)
+      clear(), viz(true, 85),
+      // I. a pulse
+      type(`bell = "xxxxxxxxxxxx"
 
-@live_loop("drone")
-def drone():
-    bg(hue=0.65, sat=0.5, val=0.02)
-    trails(0.9)
-    glow(1)
-    mirror(1)
-    use_synth("tri")
-    play([ji(1), ji(3/2), ji(5/2), ji(3)], amp=0.2, attack=4, sustain=4, release=8, room=0.8)
-    sleep(8)
-`),
+@live_loop("grid")
+def grid():
+    for i in range(12):
+        if bell[i] == "x":
+            play("d5", synth="fm", release=0.3, amp=0.8)
+        sleep(1/3)
+`), run(), wait(4000),
+      edit('"xxxxxxxxxxxx"', '"x.x.xx.x.x.x"'), run(), wait(4500),
+      // II. ground
+      insert('bell = ', 'use_bpm(100)\nd = note("d2")\n'),
+      insert('\n\n@live_loop("grid")', '\nkick = "x..x..x..x.."'),
+      insert('        sleep(1/3)', '        if kick[i] == "x": sample("bd", amp=0.6)\n'),
       run(), wait(4000),
-      // the standard bell pattern of West Africa: twelve pulses, seven strikes,
-      // and no bar line - it reads as 3 against 2 depending on where you stand
+      insert('        if kick', '            arc(r=0.5, a0=i / 12, a1=i / 12 + 0.05, life=2, fill=0, width=0.02)\n'),
+      run(), wait(3500),
       add(`
-@live_loop("bell", sync="drone")
-def bell():
-    for c in "x.x.xx.x.x.x":
-        if c == "x":
-            sample("tom", rate=2.4, amp=0.5, pan=0.3)
-            arc(r=0.5, a0=beat() / 4, a1=beat() / 4 + 0.07, hue=0.1, life=2, fill=0, width=0.015)
-        sleep(1 / 3)
-`),
-      run(), wait(5000),
-      // straight eighths against the bell's triplets: the hemiola is the groove
+@live_loop("drone", sync="grid")
+def drone():
+    bg(hue=0.65, sat=0.5, val=0.03)
+    trails(0.9)
+    mirror(1)
+    play([d, d + 7, d + 12], synth="tri", amp=0.3, attack=2, release=6, room=0.8)
+    sleep(4)
+`), run(), wait(5000),
+      // III. motion
       add(`
-@live_loop("drums", sync="drone")
-def drums():
-    for s, a in [("bd", 1.1), ("clap", 0.55)]:
-        sample(s, amp=a)
-        circle(r=0.12, vr=0.6, hue=0.6, life=1, fill=0, width=0.012)
-        for i in range(4):
-            sample("hat", amp=0.28 - i * 0.05)
-            sleep(0.5)
-`),
-      run(), wait(5000),
-      // seven eighths, 3+2+2, the way a Balkan dance counts: it meets the
-      // drums again only every 28 beats, and the filter sweeps that whole cycle
-      add(`
-@live_loop("bass", sync="drone")
+@live_loop("bass", sync="grid")
 def bass():
-    use_synth("saw")
-    for n, t in [(0, 1.5), (10, 1), (7, 1)]:
-        play(d + n, release=t * 0.8, amp=0.45, cutoff=60)
-        poly(n=7, r=0.3, rot=beat() / 28, hue=0.5, life=t, fill=0, width=0.008)
-        sleep(t)
+    for n, p in [(0, 3), (0, 3), (7, 2), (0, 2), (12, 2)]:
+        play(d + n, synth="saw", release=p / 4, amp=0.5, cutoff=70)
+        sleep(p / 3)
 `),
-      run(), wait(6000),
-      edit('cutoff=60', 'cutoff=saw(28, 48, 100)'),
-      run(), wait(5000),
-      // a voice in a scale the piano does not have: the neutral third and
-      // seventh of maqam rast sit between the keys, so write them as 3.5 and 10.5
+      edit('[d, d + 7, d + 12]', '[d + 12, d + 19, d + 24]'),
+      run(), wait(4500),
+      edit('cutoff=70', 'cutoff=sine(16, 55, 100)'), run(), wait(4500),
+      insert('\n\n@live_loop("grid")', '\nhat  = "XxxXxxXxxXxx"'),
+      insert('        sleep(1/3)', '        if hat[i] != ".": sample("hat", amp=0.25 + (hat[i] == "X") * 0.3)\n'),
+      run(), wait(4500),
+      // IV. voice and peak
       add(`
-rast = [0, 2, 3.5, 5, 7, 9, 10.5, 12]
-
-@live_loop("voice", sync="drone")
+@live_loop("voice", sync="grid")
 def voice():
-    use_synth("fm")
-    n = d + 24 + seq(rast, 1.5)
-    play(n, amp=0.3, release=2, room=0.7)
-    circle(x=sine(12, -0.8, 0.8), y=0.5, r=0.035, vy=0.4, hue=0.92, life=3)
-    sleep(1.5)
-`),
-      run(), wait(7000),
-      edit('mirror(1)', 'mirror(4)'),
+    # Arab rast: the third is 3.5, between the keys
+    for n, p in [(7, 3), (9, 1), (7, 2), (5, 2), (3.5, 16)]:
+        play(d + 24 + n, synth="pluck", amp=0.8, release=p / 3, room=0.5)
+        sleep(p / 3)
+`), run(), wait(5500),
+      edit('(3.5, 16)', '(3.5, 4), (5, 2), (3.5, 2),\n                 (2, 2), (0, 6)'), run(), wait(6000),
+      insert('\n\n@live_loop("grid")', '\nclap = "...x.....x.."'),
+      insert('        sleep(1/3)', '        if clap[i] == "x": sample("clap", amp=0.5)\n'),
+      edit('mirror(1)', 'mirror(6)'),
       run(), wait(5000),
-      // the breakdown: drums out, the three clocks keep turning
-      edit('sample(s, amp=a)', 'sample(s, amp=0)'),
-      run(), wait(7000),
+      edit('d + 24 + n', 'd + 36 + n'), run(), wait(8000),
+      // V. undoing, in reverse order of entry
+      insert('play(d + 36', '# '), run(), wait(5000),
+      edit('"XxxXxxXxxXxx"', '"............"'), edit('"...x.....x.."', '"............"'), run(), wait(3500),
+      insert('play(d + n', '# '), run(), wait(3500),
+      edit('"x..x..x..x.."', '"............"'), edit('mirror(6)', 'mirror(1)'), run(), wait(4000),
+      edit('"x.x.xx.x.x.x"', '"x..........."'), edit('amp=0.8)', 'amp=0.8, room=0.8)'), run(), wait(4500),
+      insert('play([d', '# '), run(), wait(5500),
+      edit('"x..........."', '"............"'), run(), wait(4000),
       stop(), wait(1500),
     ],
   },

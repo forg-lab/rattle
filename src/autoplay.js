@@ -81,6 +81,12 @@ export function installAutoplay({ view, run, stop, engine, setViz, setCodeFade, 
         dispatch({ selection: EditorSelection.range(at, at + step.find.length) });
         await sleep(600 / speed);
         await typeText(step.with, speed, true);
+      } else if (step.type === 'insert') {
+        const at = view.state.doc.toString().indexOf(step.find);
+        if (at < 0) throw new Error(`insert: "${step.find}" is not in the buffer`);
+        dispatch({ selection: EditorSelection.cursor(at) });
+        await sleep(400 / speed);
+        await typeText(step.text, speed, false);
       } else if (step.type === 'run') {
         await sleep(350 / speed);
         press('run');
