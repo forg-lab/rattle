@@ -204,11 +204,24 @@ function say(text, cls = '') {
   }
 }
 
-function markError(line) {
-  markErrorIn(view, line);
+// Lines that loops have failed on since the last good Run, oldest first.
+const errLines = [];
+
+function markError(line, keep = false) {
+  if (!keep) errLines.length = 0;
+  if (line >= 1 && !errLines.includes(line)) errLines.push(line);
+  markErrorIn(view, line, keep);
+  statusEl.textContent =
+    errLines.length > 1 ? 'errors on lines ' + errLines.join(', ')
+    : errLines.length ? 'error on line ' + errLines[0]
+    : 'error';
+  statusEl.className = 'status err';
 }
 
-const clearError = () => markErrorIn(view, -1);
+const clearError = () => {
+  errLines.length = 0;
+  markErrorIn(view, -1);
+};
 
 // ------------------------------------------------------------------ sliders
 
@@ -313,8 +326,6 @@ worker.onmessage = (ev) => {
   } else if (m.type === 'error') {
     say(m.text + (m.line >= 1 ? ' — line ' + m.line : ''), 'err');
     markError(m.line);
-    statusEl.textContent = m.line >= 1 ? 'error on line ' + m.line : 'error';
-    statusEl.className = 'status err';
   }
 };
 
@@ -371,9 +382,7 @@ function consume(data) {
       // already a line in what the user typed: the runtime maps it (see _exc)
       const ln = parseInt(f[2], 10);
       say(f[1] + ': ' + f[3] + (ln >= 1 ? ' — line ' + ln : ''), 'err');
-      markError(ln);
-      statusEl.textContent = ln >= 1 ? 'error on line ' + ln : 'error';
-      statusEl.className = 'status err';
+      markError(ln, true);
       continue;
     }
     if (f[0] !== 'e') continue;

@@ -47,17 +47,26 @@ export function clearFlashesIn(view, timers) {
   for (const el of view.dom.querySelectorAll('.cm-site.is-on')) el.classList.remove('is-on');
 }
 
-// Mark a line, or clear the mark when the line is out of range.
-export function markErrorIn(view, line) {
+// Mark a line, or clear the marks when the line is out of range. With keep,
+// the line is added to those already marked: several loops can each fail
+// on their own line, and every one of them should show.
+export function markErrorIn(view, line, keep = false) {
   if (!(line >= 1) || line > view.state.doc.lines) {
-    view.dispatch({ effects: setErr.of(Decoration.none) });
+    if (!keep) view.dispatch({ effects: setErr.of(Decoration.none) });
     return;
   }
   const l = view.state.doc.line(line);
-  view.dispatch({
-    effects: [
-      setErr.of(Decoration.set([errLine.range(l.from)])),
-      EditorView.scrollIntoView(l.from, { y: 'center' }),
-    ],
-  });
+  const ranges = [];
+  let first = true;
+  if (keep) {
+    view.state.field(errField).between(0, view.state.doc.length, (from) => {
+      first = false;
+      if (from !== l.from) ranges.push(errLine.range(from));
+    });
+  }
+  ranges.push(errLine.range(l.from));
+  const effects = [setErr.of(Decoration.set(ranges, true))];
+  // scroll to the first error only, so later ones don't pull the view away
+  if (first) effects.push(EditorView.scrollIntoView(l.from, { y: 'center' }));
+  view.dispatch({ effects });
 }

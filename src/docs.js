@@ -219,7 +219,7 @@ function consume(box, data) {
       // already a line in what the user typed: the runtime maps it (see _exc)
       const ln = parseInt(f[2], 10);
       say(box, f[1] + ': ' + f[3] + (ln >= 1 ? ' — line ' + ln : ''), 'err');
-      markErrorIn(box.view, ln);
+      markErrorIn(box.view, ln, true);
       continue;
     }
     if (f[0] === 'S') {
