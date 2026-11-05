@@ -244,4 +244,24 @@ def y():
   ok(!same(xs, ys), 'two loops with the same body draw different numbers', xs.slice(0, 3).join(' ') + ' / ' + ys.slice(0, 3).join(' '));
 }
 
+// ----------------------------------------------------------- odd arguments
+// Values ride out on a play() note, which carries any number, sign and all.
+const drawn = (body, n) => {
+  const r = session(`@live_loop("f")
+def f():
+    for i in range(${n}):
+        play(${body})
+    sleep(1000)
+`, 0.1);
+  return { xs: notes(r, -1e9, 1e9), errs: r.errs };
+};
+{
+  const xs = drawn('rrand_i(-3, 3)', 700).xs;
+  ok(xs.includes(-3) && xs.every((x) => x >= -3 && x <= 3), 'rrand_i reaches a negative low end');
+  ok(new Set(drawn('rrand_i(5, 3)', 100).xs).size === 3, 'rrand_i(5, 3) gives 3, 4 and 5');
+  const r = drawn('60 if one_in(0) else 61', 10);
+  ok(!r.errs && r.xs.every((x) => x === 61), 'one_in(0) is never, not a divide-by-zero', r.errs);
+  ok(/nothing to pick from/.test(drawn('choose([])', 1).errs), 'choose([]) says there is nothing to pick from');
+}
+
 report('random');

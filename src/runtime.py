@@ -555,11 +555,19 @@ def rrand(lo=0.0, hi=1.0):
 
 
 def rrand_i(lo, hi):
-    return int(lo + (hi - lo + 1) * _rnd())
+    # Ends rounded and put in order, and floored rather than int()'d: int()
+    # truncates toward zero, so a negative low end almost never came up and
+    # rrand_i(-1, -1) gave 0.
+    lo = int(round(lo))
+    hi = int(round(hi))
+    if lo > hi:
+        lo, hi = hi, lo
+    return lo + int(math.floor((hi - lo + 1) * _rnd()))
 
 
 def one_in(n):
-    return _rnd() < (1.0 / n)
+    # one_in(0) is never, not a divide-by-zero in the middle of a set
+    return n > 0 and _rnd() < (1.0 / n)
 
 
 # ------------------------------------------------------------- micro:bit
@@ -657,6 +665,15 @@ def every(n, offset=0.0):
 def choose(seq):
     if isinstance(seq, Ring):
         seq = seq.xs
+    elif not isinstance(seq, (list, tuple, str, range)):
+        # a set, a dict's keys, a generator: anything you can loop over
+        try:
+            seq = list(seq)
+        except TypeError:
+            raise TypeError('choose() picks from a list, like choose([60, 64, 67]) - got %s'
+                            % type(seq).__name__)
+    if not len(seq):
+        raise IndexError('choose() was given nothing to pick from')
     return seq[int(_rnd() * len(seq))]
 
 
