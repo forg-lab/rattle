@@ -534,9 +534,20 @@ def _rnd():
     return _CUR.seed / 4294967296.0
 
 
+def _scramble(s):
+    # xorshift starts slowly from a small state: seed 3 drew 0.0002 then 0.047,
+    # so every small seed began with choose() picking the first item, seeds 0
+    # and 1 were the same stream, and nearby seeds sounded alike. Hash the
+    # seed (murmur3's finaliser) so every seed starts somewhere unrelated.
+    x = (s + 0x9E3779B9) & 0xFFFFFFFF
+    x = ((x ^ (x >> 16)) * 0x85EBCA6B) & 0xFFFFFFFF
+    x = ((x ^ (x >> 13)) * 0xC2B2AE35) & 0xFFFFFFFF
+    return (x ^ (x >> 16)) or 1
+
+
 def use_random_seed(s):
     """Reseed this thread only. Other live_loops are unaffected."""
-    _CUR.seed = (int(s) & 0xFFFFFFFF) or 1
+    _CUR.seed = _scramble(int(s) & 0xFFFFFFFF)
 
 
 def rrand(lo=0.0, hi=1.0):
