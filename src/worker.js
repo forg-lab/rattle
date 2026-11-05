@@ -16,7 +16,18 @@ let clockT = 0;   // fallback clock when the page is not cross-origin isolated
 let pumping = false;
 let stopped = true;
 
-const audioNow = () => (shared ? f64[0] : clockT);
+let clockAt = 0;  // wall-clock ms when clockT was read (fallback path)
+
+// The page publishes the audio clock once a frame. A hidden tab gets no
+// frames but keeps playing, so carry the clock forward by the wall time since
+// it was read; without this the scheduler stalls, then runs every missed pass
+// at once when the tab comes back.
+function audioNow() {
+  const t = shared ? f64[0] : clockT;
+  const at = shared ? f64[1] : clockAt;
+  if (!at) return t;
+  return t + Math.max(0, (performance.timeOrigin + performance.now() - at) / 1000);
+}
 
 async function boot() {
   // Loaded from /public at runtime rather than bundled: the Emscripten glue
@@ -82,7 +93,7 @@ self.onmessage = (ev) => {
     boot();
     return;
   }
-  if (msg.type === 'clock') { clockT = msg.t; return; }
+  if (msg.type === 'clock') { clockT = msg.t; clockAt = msg.at || 0; return; }
   if (!mp) return;
 
   if (msg.type === 'run') {

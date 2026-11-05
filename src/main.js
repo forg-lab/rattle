@@ -16,6 +16,7 @@ import {
   setSites, siteField, errField, siteMark, flashIn, clearFlashesIn, markErrorIn,
 } from './marks.js';
 import { Engine } from './audio.js';
+import { clockPublisher, LATE } from './clock.js';
 import { Visuals } from './visuals.js';
 import { dslHover } from './hover.js';
 import { getPref, setPref } from './prefs.js';
@@ -302,6 +303,8 @@ const f64 = new Float64Array(sab, 16, 2);
 const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
 worker.postMessage({ type: 'init', sab, shared: isolated });
 
+const publishClock = clockPublisher(engine, worker, isolated, i32, f64);
+
 let ready = false;
 worker.onmessage = (ev) => {
   const m = ev.data;
@@ -399,6 +402,11 @@ function consume(data) {
       }
     }
 
+    // A note more than a moment late is dropped, not played now: a clock
+    // that stalled and caught up would otherwise sound everything it missed
+    // at once.
+    const late = engine.ctx.currentTime - (engine.t0 + t);
+    if (late > LATE && (kind === 'synth' || kind === 'sample')) continue;
     const when = Math.max(engine.t0 + t, engine.ctx.currentTime + 0.005);
     try {
       // Explicit, not an else: a bare fallthrough sends every unknown kind to
@@ -456,21 +464,20 @@ function frame() {
 
 function frameBody() {
   const ct = engine.ctx.currentTime;
-  const rel = ct - engine.t0;
-
-  if (isolated) {
-    f64[0] = rel;
-    Atomics.add(i32, 0, 1);
-    Atomics.notify(i32, 0);
-  } else {
-    worker.postMessage({ type: 'clock', t: rel });
-  }
+  const rel = publishClock();
 
   clockEl.textContent = (rel > 0 ? rel : 0).toFixed(2) + 's';
 
   // Fire the flash when the note is AUDIBLE, not when it is rendered.
   const audible = ct - engine.latency();
-  while (hq.length && hq[0].at <= audible + 0.01) flash(hq.shift().id);
+  // Back from a hidden tab, the queues hold everything that sounded meanwhile;
+  // flashing or drawing it all in one frame is the visual version of the
+  // pile-up consume() guards against. Slider moves and state still land.
+  const stale = audible - LATE;
+  while (hq.length && hq[0].at <= audible + 0.01) {
+    const h = hq.shift();
+    if (h.at >= stale) flash(h.id);
+  }
   while (vq.length && vq[0].at <= audible + 0.01) {
     const v = vq.shift();
     applySliderValue(view.dom, v.key, v.value);
@@ -479,7 +486,7 @@ function frameBody() {
   // the same frame. Same `audible` as the flash above and the note itself.
   while (gq.length && gq[0].at <= audible + 0.01) {
     const g = gq.shift();
-    if (g.draw) visuals.spawn(g.at, g.draw);
+    if (g.draw) { if (g.at >= stale) visuals.spawn(g.at, g.draw); }
     else visuals.setState(g.state);
   }
   if (vizOn) visuals.tick(audible);
@@ -501,8 +508,7 @@ function run() {
   // start() moves t0, so the shared clock is stale until the next frame.
   // Publish it now or the worker primes against the old origin and schedules
   // the whole program into a future the audio clock never reaches.
-  const rel = engine.ctx.currentTime - engine.t0;
-  if (isolated) f64[0] = rel; else worker.postMessage({ type: 'clock', t: rel });
+  publishClock();
   clearSliders();
   clearFlashes();
   siteIndex.clear();

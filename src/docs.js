@@ -10,6 +10,7 @@ import { indentUnit } from '@codemirror/language';
 import { indentMore, indentLess } from '@codemirror/commands';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { Engine } from './audio.js';
+import { clockPublisher, LATE } from './clock.js';
 import { Visuals } from './visuals.js';
 import { SECTIONS } from './docs-content.js';
 import {
@@ -44,6 +45,7 @@ const f64 = new Float64Array(sab, 16, 2);
 
 const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
 worker.postMessage({ type: 'init', sab, shared: isolated });
+const publishClock = clockPublisher(engine, worker, isolated, i32, f64);
 
 let ready = false;
 let started = false;
@@ -151,9 +153,7 @@ function play(box) {
   resetBox(box);
   if (!isUpdate) box.logEl.innerHTML = '';
 
-  const rel = engine.ctx.currentTime - engine.t0;
-  if (isolated) f64[0] = rel;
-  else worker.postMessage({ type: 'clock', t: rel });
+  publishClock();
   box.sinceRun = ChangeSet.empty(box.view.state.doc.length);
 
   runId += 1;
@@ -252,6 +252,8 @@ function consume(box, data) {
       }
     }
 
+    // late after a hidden tab caught up: drop it, as the app does
+    if (engine.ctx.currentTime - (engine.t0 + t) > LATE && (kind === 'synth' || kind === 'sample')) continue;
     const when = Math.max(engine.t0 + t, engine.ctx.currentTime + 0.005);
     try {
       // Same explicit dispatch as the app: without it, a drawing call typed
@@ -340,19 +342,14 @@ function frame() {
 
 function frameBody() {
   const ct = engine.ctx.currentTime;
-  const rel = ct - engine.t0;
-  if (isolated) {
-    f64[0] = rel;
-    Atomics.add(i32, 0, 1);
-    Atomics.notify(i32, 0);
-  } else {
-    worker.postMessage({ type: 'clock', t: rel });
-  }
+  publishClock();
 
   if (active) {
     const audible = ct - engine.latency();
+    const stale = audible - LATE;   // queued while the tab was hidden
     while (active.hq.length && active.hq[0].at <= audible + 0.01) {
-      flashIn(active.view, active.hq.shift().id, active.flashTimers);
+      const h = active.hq.shift();
+      if (h.at >= stale) flashIn(active.view, h.id, active.flashTimers);
     }
     while (active.vq.length && active.vq[0].at <= audible + 0.01) {
       const v = active.vq.shift();
@@ -360,7 +357,7 @@ function frameBody() {
     }
     while (active.gq.length && active.gq[0].at <= audible + 0.01) {
       const g = active.gq.shift();
-      if (g.draw) visuals.spawn(g.at, g.draw);
+      if (g.draw) { if (g.at >= stale) visuals.spawn(g.at, g.draw); }
       else visuals.setState(g.state);
     }
     if (active.canvas) visuals.tick(audible);
