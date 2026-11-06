@@ -195,11 +195,11 @@ def _fail(task, e):
     _LOG.append('X|' + task.name + '|' + str(ln) + '|' + msg)
 
 
-def _die(task, msg):
+def _die(task, msg, line=None):
     # For a failure with no traceback to read: blame the loop's own line.
     task.dead = True
     _release(task, max(task.t, _NOW))
-    _LOG.append('X|' + task.name + '|' + str(task.line) + '|' + msg)
+    _LOG.append('X|' + task.name + '|' + str(task.line if line is None else line) + '|' + msg)
 
 
 def _fmt(x):
@@ -265,15 +265,34 @@ def _step(task, horizon):
         try:
             d = float(d)
         except (TypeError, ValueError):
-            _die(task, 'sleep() needs a number of beats, not ' + repr(d))
+            _bad_sleep(task, 'sleep() needs a number of beats, not ' + repr(d))
+            return
+        if d != d or d in (_INF, -_INF):
+            # nan would park the loop forever with no word, and so would inf
+            _bad_sleep(task, 'sleep(%s): needs a number of beats it can finish' % d)
             return
         if d < 0:
-            _die(task, 'sleep(%s): can\'t sleep a negative number of beats' % _fmt(d))
+            _bad_sleep(task, 'sleep(%s): can\'t sleep a negative number of beats' % _fmt(d))
             return
         task.t += d * (60.0 / task.bpm)
         if task.beats is not None:
             task.beats += d
         task.mb_seen = dict(_MB_SEQ)
+
+
+_INF = float('inf')
+
+
+def _bad_sleep(task, msg):
+    # Raised inside the loop, at the yield the sleep() became, so the
+    # traceback - and the red line - lands on the sleep itself rather than
+    # on the live_loop it belongs to.
+    line = None
+    try:
+        task.gen.throw(ValueError(msg))
+    except Exception as e:
+        line = _exc(e)[0]
+    _die(task, msg, line if line is not None and line >= 1 else None)
 
 
 def _release(task, t=None):
@@ -838,7 +857,12 @@ def use_synth(name):
 
 
 def use_bpm(b):
-    _CUR.bpm = float(b)
+    bpm = float(b)
+    if not (0 < bpm < _INF):
+        # 0 divided by zero deep in the scheduler and stopped every loop;
+        # a negative tempo ran time backwards
+        raise ValueError('use_bpm() needs a tempo above 0, like use_bpm(120) - got %s' % b)
+    _CUR.bpm = bpm
 
 
 def log(*args):

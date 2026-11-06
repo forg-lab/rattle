@@ -187,15 +187,36 @@ def a():
 dies('sleep with a string', `@live_loop("a")
 def a():
     sleep("x")
-`, 1, { task: 'a', text: "sleep() needs a number of beats, not 'x'" });
+`, 3, { task: 'a', text: "sleep() needs a number of beats, not 'x'" });
 dies('sleep with a list', `@live_loop("a")
 def a():
     sleep([1])
-`, 1, { task: 'a', text: 'sleep() needs a number of beats, not [1]' });
+`, 3, { task: 'a', text: 'sleep() needs a number of beats, not [1]' });
 dies('negative sleep', `@live_loop("a")
 def a():
     sleep(-1)
-`, 1, { task: 'a', text: "sleep(-1): can't sleep a negative number of beats" });
+`, 3, { task: 'a', text: "sleep(-1): can't sleep a negative number of beats" });
+dies('a bad sleep deep in a loop is blamed on that sleep', `@live_loop("a")
+def a():
+    for i in range(2):
+        play(60)
+        sleep(0.25)
+        sleep(-i)
+`, 6, { task: 'a' });
+dies('sleep(nan) says so rather than stopping the loop silently', `@live_loop("a")
+def a():
+    play(60)
+    sleep(float("nan"))
+`, 4, { task: 'a', text: 'sleep(nan): needs a number of beats it can finish' });
+dies('sleep(-inf) is an error in that loop, not a crash of every loop', `@live_loop("a")
+def a():
+    sleep(-float("inf"))
+`, 3, { task: 'a' });
+dies('use_bpm(0) is an error in that loop, not a crash of every loop', `@live_loop("a")
+def a():
+    use_bpm(0)
+    sleep(1)
+`, 3, { task: 'a', text: 'ValueError: use_bpm() needs a tempo above 0, like use_bpm(120) - got 0' });
 
 {
   // One loop's bad sleep must not take the others down with it.
