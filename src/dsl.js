@@ -26,7 +26,8 @@ export const SYNTHS = [
   ['pluck', 'short plucked string'],
 ];
 
-export const SAMPLES = [
+// Synthesised on the spot: no files, so they play from the first Run.
+export const DRUMS = [
   ['bd', 'kick drum'],
   ['sn', 'snare'],
   ['hat', 'closed hi-hat'],
@@ -35,6 +36,40 @@ export const SAMPLES = [
   ['tom', 'tom'],
   ['click', 'rim / click'],
 ];
+
+// Recorded, from Sonic Pi's CC0 sample set (public/samples/README.md says
+// which file each came from). Fetched in the background once the page is up,
+// so they can take a moment to arrive; the drums above never do.
+export const RECORDED = [
+  ['kick', 'acoustic kick'],
+  ['808', '808 boom'],
+  ['snare', 'acoustic snare'],
+  ['hihat', 'closed hi-hat'],
+  ['openhat', 'open hi-hat'],
+  ['crash', 'crash cymbal'],
+  ['ride', 'ride cymbal'],
+  ['cowbell', 'cowbell'],
+  ['hitom', 'high tom'],
+  ['lotom', 'low tom'],
+  ['tabla_na', 'tabla, ringing na'],
+  ['tabla_tun', 'tabla, open tun'],
+  ['tabla_ghe', 'tabla, bass ghe'],
+  ['snap', 'finger snap'],
+  ['bell', 'bell'],
+  ['piano', 'piano chord'],
+  ['choir', 'choir'],
+  ['bass', 'bass hit, C'],
+  ['guitar', 'guitar chord, Em9'],
+  ['amen', 'the Amen break, 1.75s'],
+  ['scratch', 'vinyl scratch'],
+];
+
+export const SAMPLES = [...DRUMS, ...RECORDED];
+
+// Hands the runtime the names play() and sample() accept, so a typo can be
+// caught there. JSON of strings is also a Python list literal.
+export const namesCall = () =>
+  '_set_names(' + JSON.stringify(SAMPLES.map(([n]) => n)) + ', ' + JSON.stringify(SYNTHS.map(([n]) => n)) + ')';
 
 // Functions of time. Any parameter accepts one in place of a number.
 export const SIGNALS = ['saw', 'isaw', 'sine', 'tri', 'square', 'seq', 'hold', 'lift'];
@@ -56,7 +91,7 @@ export const FUNCS = {
   },
   sample: {
     sig: 'sample(name, amp=1, pan=0, rate=1, cutoff=None, room=0)',
-    doc: 'Trigger a drum sample. rate=2 plays an octave up and half as long; rate must be positive (reverse is not supported yet). amp=0 is silence, not an error.',
+    doc: 'Trigger a sample: a synthesised drum, or one of the recorded pack. rate=2 plays an octave up and half as long; rate must be positive (reverse is not supported yet). amp=0 is silence, not an error.',
   },
   sleep: {
     sig: 'sleep(beats)',

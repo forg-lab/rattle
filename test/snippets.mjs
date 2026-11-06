@@ -29,6 +29,7 @@ for (const sec of SECTIONS) {
         if (!l) continue;
         const p = l.split('|');
         if (p[0] === 'X') { rec.errors.push(p[1] + ': ' + p[3]); continue; }
+        if (p[0] === 'W') { rec.errors.push('warning: ' + p.slice(1).join('|')); continue; }
         if (p[0] !== 'e') continue;
         rec.events++;
         const kv = Object.fromEntries((p[5] || '').split(',').map(s => { const i = s.indexOf('='); return [s.slice(0, i), s.slice(i + 1)]; }));

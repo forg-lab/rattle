@@ -101,8 +101,25 @@ play(chord("e3", "minor7"))          # all three notes at once
 
 ### `sample(name, **opts)`
 
-`bd` `sn` `hat` `oh` `clap` `tom` `click` — synthesised, not recorded, so the
-app ships no audio files at all.
+`bd` `sn` `hat` `oh` `clap` `tom` `click` are synthesised, so they play from
+the very first Run.
+
+A small pack of recordings loads in the background once the page is up (about
+half a megabyte); one played before it has arrived is skipped, and the log
+says so:
+
+- drum kit: `kick` `808` `snare` `hihat` `openhat` `crash` `ride` `cowbell` `hitom` `lotom`
+- percussion: `tabla_na` `tabla_tun` `tabla_ghe` `snap` `bell`
+- musical hits: `piano` `choir` `bass` `guitar` — `rate=` repitches them
+- loops and texture: `amen` (the Amen break, 1.75s) `scratch`
+
+They come from Sonic Pi's public-domain (CC0) sample set; `public/samples/README.md`
+credits each one.
+
+A name that isn't one of these plays nothing and says so in the log, with a
+guess at what you meant: `no sample called "kik" - did you mean "kick"?` It is a
+warning, not an error, so the rest of the loop keeps playing. The same goes for
+`use_synth`.
 
 Takes `amp`, `pan`, `cutoff`, `room`, and `rate` (2 is an octave up and half as
 long; must be positive — reverse is not supported yet).

@@ -8,6 +8,7 @@
 import fs from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { transform } from '../src/transform.js';
+import { namesCall } from '../src/dsl.js';
 
 export const ROOT = fileURLToPath(new URL('../', import.meta.url));
 
@@ -17,7 +18,9 @@ export async function micropython() {
   // legal import specifier.
   const { loadMicroPython } = await import(new URL('../public/micropython.mjs', import.meta.url).href);
   const mp = await loadMicroPython({ url: ROOT + 'public/micropython.wasm' });
-  return { mp, runtime: fs.readFileSync(ROOT + 'src/runtime.py', 'utf8') };
+  // with the sample and synth names appended, as the worker hands them over
+  const runtime = fs.readFileSync(ROOT + 'src/runtime.py', 'utf8') + '\n' + namesCall() + '\n';
+  return { mp, runtime };
 }
 
 /**

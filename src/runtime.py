@@ -334,6 +334,7 @@ def _run_until(now, horizon):
 def _run_main(fn, run_id=0):
     global _CUR, _RUN
     _RUN = run_id
+    _WARNED.clear()     # a fresh Run says each warning once more
     # Drop remembered values so the literals in the freshly-run source win.
     _SLIDERS.clear()
     old = _TASKS.get(MAIN)
@@ -907,13 +908,64 @@ def play(n=60, _loc=None, **kw):
     kw['note'] = n
     if 'synth' not in kw:
         kw['synth'] = _CUR.synth
+    _known(kw['synth'], _SYNTH_NAMES, 'synth')
     _envelope(kw)
     _emit('synth', kw, _loc)
 
 
 def sample(name='bd', _loc=None, **kw):
-    kw['name'] = _val(name)
+    name = _val(name)
+    if not _known(name, _SAMPLE_NAMES, 'sample'):
+        return      # silence, and a word in the log, rather than a stray click
+    kw['name'] = name
     _emit('sample', kw, _loc)
+
+
+# The names the audio engine knows, set by the worker from dsl.js so there is
+# one list. None until then, which checks nothing.
+_SAMPLE_NAMES = None
+_SYNTH_NAMES = None
+_WARNED = set()
+
+
+def _set_names(samples, synths):
+    global _SAMPLE_NAMES, _SYNTH_NAMES
+    _SAMPLE_NAMES = samples
+    _SYNTH_NAMES = synths
+
+
+def _distance(a, b):
+    # edit distance, for "did you mean"
+    prev = list(range(len(b) + 1))
+    for i in range(1, len(a) + 1):
+        cur = [i] + [0] * len(b)
+        for j in range(1, len(b) + 1):
+            cur[j] = min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] != b[j - 1]))
+        prev = cur
+    return prev[len(b)]
+
+
+def _known(name, names, what):
+    # A misspelt name is a warning, not an error: an error would stop the loop
+    # mid-performance over one drum. Said once per name per Run.
+    if names is None or name in names:
+        return True
+    if (what, name) not in _WARNED:
+        _WARNED.add((what, name))
+        s = str(name).lower()
+        near = [n for n in names if _distance(s, n) <= max(1, len(n) // 3) or (len(s) > 2 and (s in n or n in s))]
+        other = _SYNTH_NAMES if what == 'sample' else _SAMPLE_NAMES
+        if other is not None and name in other:
+            # right name, wrong call
+            hint = ('there is a synth by that name: play(60, synth="%s")' if what == 'sample'
+                    else 'there is a sample by that name: sample("%s")') % name
+        elif near:
+            hint = 'did you mean ' + ' or '.join(['"%s"' % n for n in near[:3]]) + '?'
+        else:
+            hint = 'try ' + ', '.join(names[:6]) + ' ...'
+        what_does = 'plays nothing' if what == 'sample' else 'plays as "saw"'
+        _LOG.append('W|no %s called "%s" (it %s) - %s' % (what, name, what_does, hint))
+    return False
 
 
 # ---------------------------------------------------------------- visuals

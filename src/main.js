@@ -313,6 +313,10 @@ worker.onmessage = (ev) => {
     statusEl.textContent = isolated ? 'ready · atomics clock' : 'ready · fallback clock';
     statusEl.className = 'status ok';
     say('MicroPython ready.' + (isolated ? '' : ' Not cross-origin isolated - using the message-passed clock.'), isolated ? '' : 'warn');
+    // after MicroPython, so the samples never hold up the first Run
+    engine.loadSamples(import.meta.env.BASE_URL).then((failed) => {
+      if (failed.length) say("couldn't load the samples " + failed.join(', ') + ' - they will stay silent', 'warn');
+    });
   } else if (m.type === 'events') {
     consume(m.data);
   } else if (m.type === 'tick') {
@@ -357,12 +361,15 @@ function pushSites() {
 const flash = (id) => flashIn(view, id, flashTimers);
 const clearFlashes = () => clearFlashesIn(view, flashTimers);
 
+let loadingSaid = false;   // said once a page, not once a note
+
 function consume(data) {
   let newSliders = false;
   for (const line of data.split('\n')) {
     if (!line) continue;
     const f = line.split('|');
     if (f[0] === 'L') { say(line.slice(2)); continue; }
+    if (f[0] === 'W') { say(line.slice(2), 'warn'); continue; }
     if (f[0] === 'S') {
       const [, key, lo, hi, step, value, label, auto, rid] = f;
       if (Number(rid) !== runId) continue;   // left over from the previous Run
@@ -412,7 +419,12 @@ function consume(data) {
       // Explicit, not an else: a bare fallthrough sends every unknown kind to
       // the sampler, so a drawing call would try to play as a drum.
       if (kind === 'synth') engine.playSynth(when, p);
-      else if (kind === 'sample') engine.playSample(when, p);
+      else if (kind === 'sample') {
+        if (engine.playSample(when, p) === 'loading' && !loadingSaid) {
+          loadingSaid = true;
+          say('the recorded samples are still loading - "' + p.name + '" will play once they arrive', 'warn');
+        }
+      }
       else if (kind === 'viz') gq.push({ at: when, draw: p });
       else if (kind === 'vizstate') gq.push({ at: when, state: p });
       // anything else is a runtime we do not know about: drop it, never guess

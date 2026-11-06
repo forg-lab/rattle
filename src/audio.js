@@ -1,6 +1,21 @@
 // Web Audio engine. Consumes timestamped events and schedules them ahead of
 // time against ctx.currentTime, so nothing depends on when JS happens to run.
-// Drums are synthesised rather than sampled, so the spike needs zero assets.
+// The basic drums are synthesised, so they need no files and play from the
+// first Run; a small pack of recorded samples loads in the background.
+
+import { RECORDED } from './dsl.js';
+
+const RECORDED_NAMES = new Set(RECORDED.map(([n]) => n));
+
+// Where a recording's sound begins. MP3 pads the front with a few ms of
+// silence, and how much of it a browser trims varies; starting each buffer at
+// its own onset keeps a recorded kick on the beat everywhere.
+function onset(buf) {
+  const d = buf.getChannelData(0);
+  let i = 0;
+  while (i < d.length && Math.abs(d[i]) < 0.003) i++;
+  return Math.max(0, i - Math.round(buf.sampleRate * 0.001)) / buf.sampleRate;
+}
 
 const A4 = 440;
 const mtof = (n) => A4 * Math.pow(2, (n - 69) / 12);
@@ -41,6 +56,26 @@ export class Engine {
     this.noise = this.#noiseBuffer(2);
     this.voices = new Set();
     this.t0 = 0;
+    this.recorded = new Map();   // name -> { buf, offset }
+    this.loading = null;
+  }
+
+  // Fetch and decode the recorded pack. Resolves to the names that failed,
+  // and never rejects: a sample that can't load just stays silent.
+  loadSamples(base) {
+    if (this.loading) return this.loading;
+    this.loading = Promise.all(RECORDED.map(async ([name]) => {
+      try {
+        const r = await fetch(new URL(base + 'samples/' + name + '.mp3', location.href));
+        if (!r.ok) throw new Error(r.status);
+        const buf = await this.ctx.decodeAudioData(await r.arrayBuffer());
+        this.recorded.set(name, { buf, offset: onset(buf) });
+        return null;
+      } catch (e) {
+        return name;
+      }
+    })).then((names) => names.filter(Boolean));
+    return this.loading;
   }
 
   start() {
@@ -183,9 +218,17 @@ export class Engine {
     this.#track(nodes, stopAt);
   }
 
+  // Returns 'loading' for a recorded sample that hasn't arrived yet, which
+  // plays nothing; the caller can say so.
   playSample(when, p) {
     const ctx = this.ctx;
     const name = p.name || 'bd';
+    if (RECORDED_NAMES.has(name)) {
+      const rec = this.recorded.get(name);
+      if (!rec) return 'loading';
+      this.#playRecorded(when, p, rec);
+      return;
+    }
     const amp = Math.max(0, num(p.amp, 1)) * 0.9;
     if (amp <= 0) return;
     // reverse playback is not supported, so keep rate strictly positive rather
@@ -260,6 +303,32 @@ export class Engine {
     }
     this.#out(src, when, pan, room);
     this.#track(nodes, stopAt);
+  }
+
+  #playRecorded(when, p, rec) {
+    const ctx = this.ctx;
+    // a recording peaks at about -1 dBFS; this lands it near the synthesised kit
+    const amp = Math.max(0, num(p.amp, 1)) * 0.8;
+    if (amp <= 0) return;
+    const rate = Math.max(0.01, num(p.rate, 1));
+    const s = ctx.createBufferSource();
+    s.buffer = rec.buf;
+    s.playbackRate.value = rate;
+    const g = ctx.createGain();
+    g.gain.value = amp;
+    s.connect(g);
+    let src = g;
+    const cut = num(p.cutoff, NaN);
+    if (Number.isFinite(cut)) {
+      const f = ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = hz(mtof(cut), ctx);
+      g.connect(f);
+      src = f;
+    }
+    this.#out(src, when, num(p.pan, 0), num(p.room, 0));
+    s.start(when, rec.offset);
+    this.#track([s], when + (rec.buf.duration - rec.offset) / rate + 0.05);
   }
 
   panic() {

@@ -195,6 +195,7 @@ worker.onmessage = (ev) => {
   if (m.type === 'ready') {
     ready = true;
     statusEl.textContent = 'ready';
+    engine.loadSamples(import.meta.env.BASE_URL);
     return;
   }
   if (!active) return;
@@ -215,6 +216,7 @@ function consume(box, data) {
     const f = line.split('|');
 
     if (f[0] === 'L') { say(box, line.slice(2)); continue; }
+    if (f[0] === 'W') { say(box, line.slice(2), 'warn'); continue; }
     if (f[0] === 'X') {
       // already a line in what the user typed: the runtime maps it (see _exc)
       const ln = parseInt(f[2], 10);
@@ -259,7 +261,9 @@ function consume(box, data) {
       // Same explicit dispatch as the app: without it, a drawing call typed
       // into a docs box would be handed to the sampler and click.
       if (kind === 'synth') engine.playSynth(when, p);
-      else if (kind === 'sample') engine.playSample(when, p);
+      else if (kind === 'sample' && engine.playSample(when, p) === 'loading') {
+        say(box, 'the recorded samples are still loading', 'warn');
+      }
       else if (kind === 'viz') box.gq.push({ at: when, draw: p });
       else if (kind === 'vizstate') box.gq.push({ at: when, state: p });
     } catch (e) {

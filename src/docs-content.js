@@ -129,10 +129,13 @@ def a():
       {
         name: 'sample',
         sig: 'sample(name, **opts)',
-        blurb: 'bd sn hat oh clap tom click.',
+        blurb:
+          'Synthesised: bd sn hat oh clap tom click. Recorded, loading in the background: '
+          + 'kick 808 snare hihat openhat crash ride cowbell hitom lotom tabla_na tabla_tun '
+          + 'tabla_ghe snap bell piano choir bass guitar amen scratch.',
         code: `@live_loop("a")
 def a():
-    for name in ["bd", "sn", "hat", "oh", "clap", "tom", "click"]:
+    for name in ["bd", "sn", "hat", "kick", "snare", "hihat", "tabla_na", "cowbell"]:
         log(name)
         sample(name)
         sleep(0.5)

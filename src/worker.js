@@ -4,6 +4,7 @@
 
 import runtimeSrc from './runtime.py?raw';
 import { transform, programLine, syntaxHint } from './transform.js';
+import { namesCall } from './dsl.js';
 
 const LOOKAHEAD = 0.25;   // seconds of run-ahead
 const WAIT_MS = 60;       // cap on a single park, so we never wedge
@@ -41,6 +42,7 @@ async function boot() {
     linebuffer: true,
   });
   mp.runPython(runtimeSrc);
+  mp.runPython(namesCall());
   postMessage({ type: 'ready' });
 }
 

@@ -35,6 +35,7 @@ for (const f of files) {
       if (!line) continue;
       const p = line.split('|');
       if (p[0] === 'X') { rec.errors.push(p[1] + ': ' + p[3]); continue; }
+      if (p[0] === 'W') { rec.errors.push('warning: ' + p.slice(1).join('|')); continue; }
       if (p[0] !== 'e') continue;
       rec.events++;
       const t = p[1];

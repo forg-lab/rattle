@@ -45,7 +45,7 @@ function play(src, beats = 32) {
     at.set(f[1], (at.get(f[1]) || 0) + amp);
   }
   return {
-    errors: out.filter((l) => l.startsWith('X|')).map((l) => { const f = l.split('|'); return `${f[1]}: ${f.slice(3).join('|')} (line ${f[2]})`; }),
+    errors: out.filter((l) => l.startsWith('X|') || l.startsWith('W|')).map((l) => { const f = l.split('|'); return `${f[1]}: ${f.slice(3).join('|')} (line ${f[2]})`; }),
     events: sounds.length,
     peak: Math.max(0, ...at.values()),
   };
