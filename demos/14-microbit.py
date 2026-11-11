@@ -10,6 +10,13 @@
 # It is pentatonic, so it cannot play a wrong note. Lean on that when the room
 # is loud and everyone is waving a board around.
 #
+# The board needs a small program on it first, which sends its readings up
+# the cable. Flash it once, following the steps at the top of the file:
+#
+#   https://github.com/forg-lab/rattle/blob/main/microbit/controller.py
+#
+# then click "micro:bit" in the header above and pick the board.
+#
 # Without a micro:bit this still runs: every channel reads 0, so it sits at the
 # bottom of the scale and plays a slow, dark version of itself.
 

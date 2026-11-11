@@ -1,5 +1,31 @@
 # rattle controller - flash this onto a micro:bit with python.microbit.org
 #
+# Setting up a board (once per board; it stays flashed after unplugging):
+#
+#   1. Plug the micro:bit into the computer with a USB cable. Some cables
+#      only charge - if nothing below works, try another cable first.
+#   2. In Chrome or Edge, open https://python.microbit.org
+#   3. Select everything in its editor, delete it, and paste in this whole
+#      file.
+#   4. Click "Send to micro:bit" and pick the board when asked. The lights
+#      flicker for a few seconds while it flashes.
+#   5. In rattle, click "micro:bit" in the header and pick the board again.
+#      The panel in the bottom-left corner shows the readings arriving -
+#      tilt the board and watch tilt_x and tilt_y move.
+#
+# rattle needs Chrome or Edge for this too; Safari and Firefox cannot talk
+# to the board. Only one tab can hold the board at a time.
+#
+# What it sends:
+#
+#   tilt_x, tilt_y   tilt left/right and away/toward, 0..1, all the time
+#   light            how much light falls on the LEDs, 0..1, all the time
+#   a, b             button A or B was pressed
+#   shake            the board was shaken
+#   logo             the gold logo on the front was touched
+#
+# Read them in rattle with mb("tilt_x", lo, hi) and hit("a").
+#
 # It sends one reading per line, as
 #
 #     name,value
