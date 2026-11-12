@@ -148,7 +148,7 @@ export const FUNCS = {
   line: { sig: 'line(x=0, y=0, x2=0, y2=0, **opts)', doc: 'Spawn a line between two points. vx and vy drift both ends so it travels rather than stretches; vx2 and vy2 move the far end on its own.' },
   arc: { sig: 'arc(x=0, y=0, r=0.2, a0=0, a1=0.5, **opts)', doc: 'Spawn an arc. Angles are in turns, so a1=1 is a full circle. rx and ry make it elliptical; fill=1 closes it into a pie wedge.' },
   bg: { sig: 'bg(hue=0.62, sat=0.35, val=0.06)', doc: 'Background colour. Lands on the beat you wrote it on rather than easing across it.' },
-  trails: { sig: 'trails(amount=0.9)', doc: 'Feedback. 0 clears every frame; toward 1 leaves long smears. Capped at 0.97, below which an 8-bit fade would never finish and burn in.' },
+  trails: { sig: 'trails(amount=0.9)', doc: 'Feedback. 0 clears every frame; toward 1 leaves long smears; 1 never fades, so everything drawn stays until you lower it.' },
   glow: { sig: 'glow(on=1)', doc: 'Additive blending, so overlapping shapes brighten instead of covering.' },
   mirror: { sig: 'mirror(n=1, flip=1)', doc: 'Kaleidoscope into n wedges; 1 is off. Costs one draw per shape per wedge, so it is capped at 12.' },
 };

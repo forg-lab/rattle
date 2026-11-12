@@ -66,16 +66,22 @@ const sc = log.filter(e => e.m === 'scale').pop();
 ok(tr && tr.a[0] === 800 && tr.a[1] === 450, 'origin at centre', JSON.stringify(tr?.a));
 ok(sc && sc.a[0] === 450 && sc.a[1] === -450, 'short axis (900/2) normalised, y flipped UP', JSON.stringify(sc?.a));
 
-// ---- trail fade clamp: the burn-in guard
+// ---- trails(1) never fades; just under 1 still does
 ({ canvas, log } = stub());
 v = new Visuals(canvas);
 v.setState({ trails: '1' });
 v.tick(0);                     // first tick sizes the canvas and hard-clears
-log.length = 0; v.tick(0.016); // now the only fillRect is the per-frame fade
+log.length = 0; v.tick(0.016); // now the only fillRect would be the per-frame fade
+ok(!log.some(e => e.m === 'fillRect'), 'trails(1) draws no fade at all');
+v.setState({ trails: '5' });
+log.length = 0; v.tick(0.032);
+ok(!log.some(e => e.m === 'fillRect'), 'trails above 1 clamps to 1');
+v.setState({ trails: '0.9' });
+log.length = 0; v.tick(0.048);
 const fr = log.find(e => e.m === 'fillRect');
 const fa = alphaOf(fr.fillStyle);
 ok(Number.isFinite(fa), 'the per-frame fade is an rgba fill', fr.fillStyle);
-ok(fa >= 0.025, 'trails(1) still fades (no permanent burn-in)', String(fa));
+ok(Math.abs(fa - 0.1) < 1e-9, 'trails(0.9) fades by 0.1 a frame', String(fa));
 ok(fr.gco === 'source-over', 'fade runs in source-over, before any additive switch', fr.gco);
 
 // and trails(0) must be a full clear

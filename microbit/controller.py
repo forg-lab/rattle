@@ -58,7 +58,10 @@ while True:
     # --- things that vary: printed every pass, so rattle always has a value
     print("tilt_x,", unit(accelerometer.get_x(), -1000, 1000))
     print("tilt_y,", unit(accelerometer.get_y(), -1000, 1000))
-    print("light,", unit(display.read_light_level(), 0, 255))
+    # The sensor reads 0..255, but indoors it rarely gets past 40, so 0..255
+    # left light stuck near 0. Scaled to 0..40, a lit room reads near 1 and a
+    # cupped hand near 0. Raise the 40 if your room is brighter than that.
+    print("light,", unit(display.read_light_level(), 0, 40))
 
     # --- things that happen: printed only when they do, so hit() fires once
     #

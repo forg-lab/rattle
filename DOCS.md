@@ -69,6 +69,13 @@ Without `sync`, a new loop starts on the next beat after everything already
 scheduled, so it lands in phase rather than a fraction late. `delay` offsets the
 start in beats.
 
+`sync` aligns the *start* and nothing more. Whether two loops keep meeting is
+decided by their bodies: one that sleeps 2 beats stays locked to one that sleeps
+1, and one that sleeps 2.2 walks away from it a fifth of a beat at a time. That
+drift is a feature, not a leak — it is what [`07-polyrhythm`](demos/07-polyrhythm.py)
+is made of. If two loops should stay together, give them the same period or a
+multiple of it.
+
 A loop whose body never calls `sleep` would spin forever; that is caught and
 reported rather than hanging the page.
 
@@ -361,10 +368,12 @@ shorter axis — the same range a signal already produces, so
 extends past ±1, so `x=1.4` is a legal off-to-the-side position that stays put
 as the window resizes.
 
-Two limits are deliberate. `trails` caps at 0.97, because an 8-bit fade toward
-an opaque colour never quite arrives and 1.0 would burn the canvas in
-permanently. `mirror` caps at 12 and the live shape count at 360, because cost
-per frame is shapes × wedges — a runaway loop should degrade, not freeze.
+`trails` runs from 0 to 1. At 1 nothing fades at all: every shape stays on the
+canvas until you lower it again, and `trails(0)` wipes it clean.
+
+One limit is deliberate. `mirror` caps at 12 and the live shape count at 360,
+because cost per frame is shapes × wedges — a runaway loop should degrade, not
+freeze.
 
 State changes land *on* the beat you wrote them on rather than easing across it.
 Blurring the downbeat is the one thing a visual should not do; if you want a

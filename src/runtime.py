@@ -1058,10 +1058,9 @@ def bg(hue=0.62, sat=0.35, val=0.06, _loc=None):
 
 
 def trails(amount=0.9, _loc=None):
-    # capped below 1: an 8-bit fade toward an opaque colour never quite
-    # converges, so trails(1.0) would burn the canvas in permanently
+    # 1 is no fade at all: everything drawn stays until trails drops again
     a = _val(amount)
-    _emit('vizstate', {'trails': min(0.97, max(0.0, a))}, _loc)
+    _emit('vizstate', {'trails': min(1.0, max(0.0, a))}, _loc)
 
 
 def glow(on=1, _loc=None):

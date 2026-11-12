@@ -60,7 +60,10 @@ def high():
       {
         name: 'sync',
         sig: '@live_loop(name, sync="other")',
-        blurb: 'Start a loop in phase with another so they can never drift apart.',
+        blurb:
+          'Line a new loop up with another one\u2019s clock at the start. What keeps them '
+          + 'together afterwards is the periods, not sync: equal or multiple loop lengths '
+          + 'stay locked, uneven ones drift apart \u2014 which is how polyrhythm works.',
         code: `@live_loop("kick")
 def kick():
     sample("bd")
@@ -469,8 +472,8 @@ def v():
         name: 'trails',
         sig: 'trails(amount=0.9)',
         blurb:
-          '0 clears every frame; toward 1 leaves long feedback smears. Capped ' +
-          'at 0.97 — below that an 8-bit fade never finishes and burns in.',
+          '0 clears every frame; toward 1 leaves long feedback smears. At 1 ' +
+          'nothing fades: every shape stays until you lower it again.',
         code: `use_bpm(120)
 
 @live_loop("v")

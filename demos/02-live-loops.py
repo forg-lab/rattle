@@ -13,7 +13,10 @@ def kick():
     sample("bd", amp=1.1)
     sleep(1)
 
-# sync= starts a loop in phase with another, so they can never drift apart
+# sync= lines a new loop up with another one's clock at the start. Staying
+# together after that is up to the periods: this body is 2 beats against the
+# kick's 1, so they keep meeting. Uneven lengths drift apart on purpose - that
+# is the polyrhythm demo.
 @live_loop("snare", sync="kick")
 def snare():
     sleep(1)

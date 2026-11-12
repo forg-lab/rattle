@@ -19,10 +19,6 @@ const num = (v, dflt) => {
 const MAX_SHAPES = 360;
 const MAX_SEG = 12;
 
-// An 8-bit fade toward an opaque colour never quite reaches it, so a fade alpha
-// below this leaves permanent burn-in that no clear can remove.
-const MIN_FADE = 0.025;
-
 function hsv(h, s, v) {
   h = ((h % 1) + 1) % 1;
   s = Math.min(1, Math.max(0, s));
@@ -93,7 +89,7 @@ export class Visuals {
 
   setState(p) {
     const st = this.st;
-    if (p.trails !== undefined) st.trails = Math.min(0.97, Math.max(0, num(p.trails, 0)));
+    if (p.trails !== undefined) st.trails = Math.min(1, Math.max(0, num(p.trails, 0)));
     if (p.glow !== undefined) st.glow = num(p.glow, 0) ? 1 : 0;
     if (p.mirror !== undefined) st.mirror = Math.min(MAX_SEG, Math.max(1, Math.round(num(p.mirror, 1))));
     if (p.flip !== undefined) st.flip = num(p.flip, 0) ? 1 : 0;
@@ -170,9 +166,14 @@ export class Visuals {
     //    an additive composite cannot darken, so a trail under it never fades.
     ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.globalCompositeOperation = 'source-over';
-    const fade = Math.max(MIN_FADE, 1 - st.trails);
-    ctx.fillStyle = `rgba(${st.bgR},${st.bgG},${st.bgB},${fade})`;
-    ctx.fillRect(0, 0, c.width, c.height);
+    //    trails(1) is no fade at all, so nothing is drawn over the last frame.
+    //    Very close to 1 an 8-bit fade never quite reaches the background and
+    //    leaves a faint ghost; lowering trails clears it.
+    const fade = 1 - st.trails;
+    if (fade > 0) {
+      ctx.fillStyle = `rgba(${st.bgR},${st.bgG},${st.bgB},${fade})`;
+      ctx.fillRect(0, 0, c.width, c.height);
+    }
 
     // 2. World transform: -1..1 on the SHORT axis, origin centre, y up.
     //    The negative Y scale is what flips the axis - it also mirrors text and

@@ -106,7 +106,7 @@ ok(pairs.length > 0 && pairs.every(([a, b]) => a === b),
 // ------------------------------------------------------- clamps
 r = run(`@live_loop("v")\ndef v():\n    trails(5)\n    mirror(99)\n    sleep(1)\n`);
 const st = r.filter(e => e.kind === 'vizstate');
-ok(st.some(e => e.kv.trails === '0.97'), 'trails clamped below 1 (burn-in guard)', st.map(e => e.kv.trails).filter(Boolean).join());
+ok(st.some(e => Number(e.kv.trails) === 1), 'trails clamped to 1', st.map(e => e.kv.trails).filter(Boolean).join());
 ok(st.some(e => e.kv.mirror === '12'), 'mirror wedges capped', st.map(e => e.kv.mirror).filter(Boolean).join());
 
 // ------------------------------------------------------- namespace intact
