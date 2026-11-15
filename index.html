@@ -4,7 +4,29 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%2316181d'/%3E%3Cpath d='M6 21c3-11 5.5-11 8.5 0s5.5 11 8.5 0' stroke='%237ee0c0' stroke-width='2.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E" />
-    <title>rattle</title>
+    <title>rattle — live code music in the browser with Python</title>
+    <meta name="description" content="rattle is a free live-coding environment for music and visuals. Write Python in the browser, hear it immediately, and change it while it plays. Sonic Pi-style live loops, synths and samples, no install." />
+    <link rel="canonical" href="https://forg-lab.github.io/rattle/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="rattle" />
+    <meta property="og:title" content="rattle — live code music in the browser with Python" />
+    <meta property="og:description" content="rattle is a free live-coding environment for music and visuals. Write Python in the browser, hear it immediately, and change it while it plays. Sonic Pi-style live loops, synths and samples, no install." />
+    <meta property="og:url" content="https://forg-lab.github.io/rattle/" />
+    <meta name="twitter:card" content="summary" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "rattle",
+        "url": "https://forg-lab.github.io/rattle/",
+        "description": "Live-code music and visuals in the browser with Python.",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "Any (web browser)",
+        "isAccessibleForFree": true,
+        "codeRepository": "https://github.com/forg-lab/rattle",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
     <!-- Must run before anything else: adds COOP/COEP on hosts that cannot. -->
     <script src="./coi-serviceworker.js"></script>
   </head>
@@ -57,6 +79,26 @@
         </aside>
       </main>
     </div>
+    <!-- What this page is, in words: the app itself is all editor and canvas,
+         which says nothing to a screen reader, a crawler, or a browser with
+         JavaScript off. Clipped out of view rather than display:none so it is
+         still read. -->
+    <section id="about" style="position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap">
+      <h1>rattle: live code music in the browser with Python</h1>
+      <p>
+        rattle is a free live-coding environment for music and generative
+        visuals. You write ordinary Python, press Run and hear it, then edit
+        the code while it plays: each live loop swaps in at its next boundary
+        without dropping the beat. It follows Sonic Pi's model of live loops,
+        synths, samples and effects, and runs entirely in the browser with
+        MicroPython and Web Audio. Nothing to install and no account.
+      </p>
+      <p>
+        <a href="./docs.html">Reference: every function, with examples you can play and edit</a>.
+        <a href="https://github.com/forg-lab/rattle">Source code on GitHub</a>.
+      </p>
+    </section>
+    <noscript><p style="position:fixed;inset:auto 0 0 0;margin:0;padding:12px;background:#16181d;color:#fff">rattle needs JavaScript to run.</p></noscript>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

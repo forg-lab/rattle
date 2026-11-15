@@ -373,6 +373,10 @@ requestAnimationFrame(frame);
 
 const nav = document.getElementById('nav');
 const main = document.getElementById('main');
+// docs.html ships the reference as plain text (see prerenderDocs in
+// vite.config.js) so it reads without JavaScript; the live boxes replace it.
+nav.replaceChildren();
+main.replaceChildren();
 const boxes = [];
 
 for (const section of SECTIONS) {

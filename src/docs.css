@@ -226,3 +226,11 @@ button.play:hover { background: #2a5348; }
   border-radius: 7px;
   background: #0c0e12;
 }
+
+/* The plain-text reference that docs.html ships with, before the boxes load. */
+.entry-static {
+  margin: 0;
+  padding: 10px 12px;
+  overflow-x: auto;
+  font: 12.5px/1.4 var(--mono);
+}
