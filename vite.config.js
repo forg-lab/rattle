@@ -3,6 +3,7 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { SECTIONS } from './src/docs-content.js';
+import { renderNav, renderMain } from './src/visuals-tutorial-render.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 
@@ -34,8 +35,10 @@ function staticDocs() {
 const prerenderDocs = {
   name: 'prerender-docs',
   transformIndexHtml(html, ctx) {
-    if (!ctx.path.endsWith('docs.html')) return html;
-    const { nav, main } = staticDocs();
+    // the visuals tutorial is the same idea, from the renderer its page uses
+    const tutorial = ctx.path.endsWith('visuals-tutorial.html');
+    if (!tutorial && !ctx.path.endsWith('docs.html')) return html;
+    const { nav, main } = tutorial ? { nav: renderNav(), main: renderMain('./') } : staticDocs();
     return html
       .replace('<nav id="nav"></nav>', () => `<nav id="nav">\n${nav}\n</nav>`)
       .replace('<main id="main"></main>', () => `<main id="main">\n${main}\n</main>`);
@@ -77,6 +80,7 @@ export default defineConfig(({ command }) => ({
       input: {
         main: resolve(here, 'index.html'),
         docs: resolve(here, 'docs.html'),
+        visualsTutorial: resolve(here, 'visuals-tutorial.html'),
       },
     },
   },

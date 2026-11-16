@@ -25,7 +25,7 @@ function play(src, beats = 32) {
   } catch (e) {
     const text = String(e.message || e);
     const line = programLine(text, transform(src).lineOffset);
-    return { errors: [`line ${line}: ${text.trim().split('\n').pop()}${syntaxHint(src, line)}`], events: 0, peak: 0 };
+    return { errors: [`line ${line}: ${text.trim().split('\n').pop()}${syntaxHint(src, line)}`], events: 0, shapes: 0, peak: 0 };
   }
   mp.runPython('_run_main(__main__, 1)');
   mp.runPython('_flush()');
@@ -47,6 +47,7 @@ function play(src, beats = 32) {
   return {
     errors: out.filter((l) => l.startsWith('X|') || l.startsWith('W|')).map((l) => { const f = l.split('|'); return `${f[1]}: ${f.slice(3).join('|')} (line ${f[2]})`; }),
     events: sounds.length,
+    shapes: out.filter((l) => l.startsWith('e|') && l.split('|')[2] === 'viz').length,
     peak: Math.max(0, ...at.values()),
   };
 }
@@ -93,6 +94,38 @@ for (const f of lessons) {
   const answerLine = /^# 1\. line (\d+):/m.exec(read(DIR + 'answers/' + f));
   const colonLine = read(DIR + f).split('\n').findIndex((l) => l.startsWith('def drums()')) + 1;
   ok(answerLine && +answerLine[1] === colonLine, 'debugging: the answers name the right line', `${answerLine && answerLine[1]} vs ${colonLine}`);
+}
+
+// The visuals tutorial. Lessons 1 to 6 are a page (src/visuals-tutorial-
+// content.js); the last part, the piece, is tutorial/visuals/ in the menu.
+// The same promises: everything the page offers to play has to play, and
+// here it has to draw as well.
+{
+  const { LESSONS: V, PIECE } = await import('../src/visuals-tutorial-content.js');
+  const draws = (src, what) => {
+    const r = play(src);
+    ok(!r.errors.length && r.events > 0 && r.shapes > 0 && r.peak <= 3, `${what} plays and draws`,
+      r.errors.join('; ') || `${r.events} sounds, ${r.shapes} shapes, peak amp ${r.peak.toFixed(2)}`);
+  };
+  V.forEach((l, i) => {
+    draws(l.code, `visuals ${i + 1} ${l.id}`);
+    draws(l.finished, `visuals ${i + 1} ${l.id}, finished`);
+    ok(l.steps.length >= 3 && l.steps.every((s) => s.text && s.answer) && l.challenge.text && l.challenge.answer,
+      `visuals ${i + 1} ${l.id} has an answer for every step`);
+  });
+  ok(new Set(V.map((l) => l.id)).size === V.length, 'visuals: every lesson has its own id');
+
+  // Lesson 5, step 2: the longer list has to stop the loop with an IndexError,
+  // as the step and its answer say it will.
+  const five = V.find((l) => l.id === 'lists').code;
+  const r = play(five.replace('69, 72]', '69, 72, 74]'), 64);
+  ok(five.includes('69, 72]') && r.errors.some((e) => /^tune: IndexError/.test(e)), 'visuals 5: a note without a hue is an IndexError', r.errors.join('; '));
+
+  // The piece: the page links to a menu entry, which has to exist and play.
+  const file = ROOT + PIECE.open + '.py';
+  ok(fs.existsSync(file), 'visuals: the piece the page opens is in the menu', PIECE.open);
+  if (fs.existsSync(file)) draws(read(file), 'visuals piece');
+  ok(read(file).startsWith(`# Visuals ${V.length + 1} of ${V.length + 1} - `), 'visuals: the piece is numbered after the lessons');
 }
 
 report('tutorial');

@@ -8,7 +8,7 @@
 #   [ ] a function you wrote that returns a list        (7)
 #
 # Extras: try cutoff=50 to 110 on a "saw" synth; use_synth("fm") or "pluck";
-# a seeded random melody (8); visuals - see the "visuals" demo in the menu.
+# a seeded random melody (8); visuals - see "visuals tutorial" in the menu.
 # Copying a loop you liked from an earlier lesson is a fine way to start.
 #
 # Your work is saved in this browser as you go. To hand it in, select all

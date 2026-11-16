@@ -41,21 +41,42 @@ const DEMOS = Object.keys(demoModules).sort().map((path) => {
 // they keep their numbers in the menu ("3 for loops"), and each one keeps the
 // student's edits (lessons.js).
 const lessonModules = import.meta.glob('../tutorial/*.py', { query: '?raw', import: 'default', eager: true });
+// The visuals tutorial is a page of its own (visuals-tutorial.html). What is
+// here is its last part, the piece, which wants the whole editor; it switches
+// the canvas on as it loads.
+const vizLessonModules = import.meta.glob('../tutorial/visuals/*.py', { query: '?raw', import: 'default', eager: true });
 
-const LESSONS = Object.keys(lessonModules).sort().map((path) => {
+const lessonsFrom = (modules, dir, viz) => Object.keys(modules).sort().map((path) => {
   const file = path.split('/').pop().replace(/\.py$/, '');
   return {
-    file: 'tutorial/' + file,
+    file: dir + file,
     label: file.replace(/^0*(\d+)[-_]?/, '$1 ').replace(/[-_]/g, ' '),
-    code: lessonModules[path],
+    code: modules[path],
     lesson: true,
+    viz,
   };
 });
+const LESSONS = lessonsFrom(lessonModules, 'tutorial/', false);
+const VIZ_LESSONS = lessonsFrom(vizLessonModules, 'tutorial/visuals/', true);
 
-const findPiece = (file) => LESSONS.find((x) => x.file === file) || DEMOS.find((x) => x.file === file);
+// A file of the student's own: empty, first in the menu, and kept like a
+// lesson. Everything else in the menu is somebody else's code, which left
+// students unsure where their own was meant to go.
+const BLANK = { file: 'blank', label: 'blank file', code: '', lesson: true, blank: true };
+
+const findPiece = (file) => [BLANK, ...LESSONS, ...VIZ_LESSONS, ...DEMOS].find((x) => x.file === file);
+
+// ?open=<file> asks for a piece by name: how the visuals tutorial page hands
+// over to the editor. Taken off the address once read, so a later reload
+// comes back to wherever the student has got to since.
+const asked = findPiece(new URLSearchParams(location.search).get('open'));
+if (asked) {
+  openLesson(asked.lesson ? asked.file : null);
+  history.replaceState(null, '', location.pathname + location.hash);
+}
 
 // A student who reloads mid-tutorial comes back to their lesson.
-let current = findPiece(lastLesson()) || DEMOS[0] || null;
+let current = asked || findPiece(lastLesson()) || DEMOS[0] || null;
 const DEFAULT = current ? (current.lesson && savedLesson(current.file)) || current.code : '# no demos found\n';
 
 // ---------------------------------------------------------------- highlight
@@ -764,6 +785,7 @@ applyCodeOpacity();
 
 const demoSel = document.getElementById('demo');
 const RESET = '__reset';
+const VIZ_PAGE = '__visuals_tutorial';
 function menuGroup(label, pieces) {
   const g = document.createElement('optgroup');
   g.label = label;
@@ -776,8 +798,17 @@ function menuGroup(label, pieces) {
   demoSel.append(g);
   return g;
 }
-if (LESSONS.length) {
-  const g = menuGroup('tutorial', LESSONS);
+menuGroup('your own work', [BLANK]);
+for (const [label, pieces] of [['tutorial', LESSONS], ['visuals tutorial', VIZ_LESSONS]]) {
+  if (!pieces.length) continue;
+  const g = menuGroup(label, pieces);
+  if (pieces === VIZ_LESSONS) {
+    // lessons 1 to 6 are on their own page; this entry is the way there
+    const link = document.createElement('option');
+    link.value = VIZ_PAGE;
+    link.textContent = 'lessons 1 to 6 \u2197';
+    g.prepend(link);
+  }
   const o = document.createElement('option');
   o.value = RESET;
   o.textContent = '\u21BA reset this lesson';
@@ -785,6 +816,8 @@ if (LESSONS.length) {
 }
 menuGroup('demos', DEMOS);
 if (current) demoSel.value = current.file;
+// a reload in the middle of a visuals lesson comes back with the canvas on
+if (current && current.viz) setViz(true);
 
 // Save the open lesson's text: on Run, before leaving it, every few seconds,
 // and when the page goes away.
@@ -801,17 +834,32 @@ function load(piece, text) {
   stop();
   openNav(false);
   current = piece;
+  if (piece.viz && !vizOn) setViz(true);
   openLesson(piece.lesson ? piece.file : null);
   demoSel.value = piece.file;
   view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
   logEl.innerHTML = '';
-  run();
+  // an empty file has nothing to run yet
+  if (text.trim()) run();
+  if (piece.blank) say('this file is yours - what you write here is saved in this browser', 'ok');
   view.focus();
 }
 
 demoSel.onchange = () => {
+  if (demoSel.value === VIZ_PAGE) {
+    keepLesson();
+    if (current) demoSel.value = current.file;
+    location.href = './visuals-tutorial.html';
+    return;
+  }
   if (demoSel.value === RESET) {
     if (!current) return;
+    if (current.blank) {
+      // there is no original to go back to, and emptying it would be a loss
+      demoSel.value = current.file;
+      say('the blank file is your own work, so it is not reset - select all and delete to empty it', 'warn');
+      return;
+    }
     forgetLesson(current.file);
     load(current, current.code);
     say('back to the original ' + (current.lesson ? 'lesson' : 'demo'), 'ok');
@@ -822,7 +870,7 @@ demoSel.onchange = () => {
   keepLesson();
   const saved = d.lesson ? savedLesson(d.file) : null;
   load(d, saved || d.code);
-  if (saved) say('your edits to this lesson are back - "reset this lesson" in the menu starts it over', 'ok');
+  if (saved && !d.blank) say('your edits to this lesson are back - "reset this lesson" in the menu starts it over', 'ok');
 };
 
 if (import.meta.env.DEV) window.__rattle = { view, engine, visuals, run, stop, worker, setViz };

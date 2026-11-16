@@ -1,0 +1,116 @@
+/* The visuals tutorial page. Everything shared with the reference (header,
+   nav, cards, boxes) comes from docs.css, loaded by boxes.js. */
+
+h1 {
+  font-size: 28px;
+  margin: 0 0 10px;
+  letter-spacing: -.015em;
+}
+
+.nav-item { font-family: inherit; font-size: 13px; line-height: 1.4; padding: 4px 0 4px 10px; }
+
+.lesson { margin-bottom: 64px; }
+
+.lesson h2 { margin-bottom: 2px; }
+.lesson-n { color: var(--accent); margin-right: 4px; }
+
+.lesson-meta {
+  margin: 0 0 14px;
+  color: var(--dim);
+  font-size: 12.5px;
+}
+
+.lesson-intro {
+  margin: 0 0 12px;
+  max-width: 68ch;
+  color: #c4cad5;
+}
+
+.lesson h3 {
+  margin: 22px 0 8px;
+  font-size: 12px;
+  letter-spacing: .09em;
+  text-transform: uppercase;
+  color: var(--fg);
+}
+.optional {
+  margin-left: 6px;
+  color: var(--dim);
+  font-weight: 400;
+  letter-spacing: .04em;
+}
+
+.lesson code, .section-blurb code {
+  font: 12.5px var(--mono);
+  color: #d8dee9;
+  background: #1f232b;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 4px;
+}
+.lesson pre code { background: none; border: 0; padding: 0; }
+
+/* code on the left, the picture on the right: a square, so both axes run
+   from -1 to 1 and the lesson can say so */
+.stage {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 12px;
+  align-items: start;
+}
+.stage .entry-canvas {
+  width: 300px;
+  height: 300px;
+  margin-top: 0;
+}
+@media (max-width: 720px) {
+  .stage { grid-template-columns: minmax(0, 1fr); }
+  .stage .entry-canvas { width: min(100%, 340px); height: auto; aspect-ratio: 1; }
+}
+
+button.reset { margin-left: auto; color: var(--dim); }
+
+.steps {
+  margin: 0;
+  padding-left: 22px;
+  max-width: 70ch;
+}
+.steps > li { margin-bottom: 14px; padding-left: 4px; }
+.steps > li::marker { color: var(--accent); font-weight: 600; }
+.steps p, .challenge p { margin: 0 0 6px; }
+.steps pre, .challenge pre { margin: 6px 0; }
+
+.challenge { max-width: 70ch; }
+
+.answer { margin-top: 4px; }
+.answer > summary {
+  cursor: pointer;
+  color: var(--dim);
+  font-size: 12.5px;
+  width: fit-content;
+}
+.answer > summary:hover { color: var(--accent); }
+.answer[open] {
+  border-left: 2px solid #2f5d51;
+  padding-left: 12px;
+  margin-bottom: 6px;
+}
+.answer[open] > summary { margin-bottom: 4px; }
+
+.checklist, .tips { max-width: 68ch; padding-left: 22px; }
+.checklist { list-style: "☐  "; }
+.checklist li { margin-bottom: 3px; }
+.tips { color: var(--dim); font-size: 13px; }
+
+.open-app {
+  display: inline-block;
+  margin: 8px 0;
+  padding: 7px 16px;
+  border: 1px solid #2f5d51;
+  border-radius: 7px;
+  background: #23443c;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+.open-app:hover { background: #2a5348; }

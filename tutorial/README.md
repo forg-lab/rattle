@@ -28,6 +28,18 @@ The core path is 1-7 and 9, about 30 minutes, which leaves 10-15 for the
 piece. Lesson 6 tells students who are past 25 minutes to skip 8.
 Challenges are marked optional.
 
+## A second track: visuals
+
+The visuals tutorial is a second set of lessons on a page of its own,
+reached from **visuals tutorial** in the menu. It practises loops, `if`,
+random numbers, lists and functions by drawing shapes in time with the
+music. It has [its own guide](visuals/README.md).
+
+## A place to work
+
+**blank file**, first in the menu, is an empty file of the student's own.
+It is saved in the browser like a lesson and is never reset.
+
 ## Answers
 
 `tutorial/answers/` has one file per lesson. Each is the lesson after every
