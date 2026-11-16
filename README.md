@@ -18,7 +18,7 @@ Canvas 2D, no backend.
 Cmd+Enter runs the buffer, Cmd+. stops. Edit while it plays — `live_loop`
 bodies swap in at the next loop boundary without dropping the beat.
 
-    npm test           # the whole suite, a couple of seconds
+    npm test           # the whole suite, a few seconds
 
 ## Tests
 
@@ -32,10 +32,84 @@ mock scheduler, so a passing test is evidence about what ships.
 | `render.mjs` | the canvas renderer against a stub context that records every call: envelopes, the trail-fade burn-in guard, the runaway cap, and that no invalid geometry ever reaches the canvas API |
 | `demos.mjs` | every demo in `demos/` runs 20 beats with no thread dying and nothing outside plausible range |
 | `snippets.mjs` | every runnable snippet on the docs page still runs — the docs are interactive, so a stale example is a broken feature |
+| `offline.mjs` | the [offline renderer](#rendering-to-a-file): the same program and seed give the same bytes, a failing program says where and leaves no WAV, every demo renders 8s, recorded samples land on their beat |
 
-The suite installs nothing: it imports only node built-ins and the app's own
-source, with MicroPython vendored under `public/`. Run one file on its own with
-`node test/render.mjs`, or `npm test -- -v` for the full output of each.
+The suite installs nothing, with one exception: it imports only node built-ins
+and the app's own source, with MicroPython vendored under `public/`. The
+exception is `offline.mjs`, which needs the `node-web-audio-api` package — an
+optional dependency, there for the offline renderer and nothing else. Without
+it that one file reports itself skipped and the rest run as before; CI installs
+it and sets `RATTLE_REQUIRE_RENDER=1`, which turns a skip into a failure. Run
+one file on its own with `node test/render.mjs`, or `npm test -- -v` for the
+full output of each.
+
+## Rendering to a file
+
+    node bin/render.mjs program.py --seconds 8 --out program.wav
+
+renders a program to a WAV with no browser, faster than real time — an 8s clip
+takes about a tenth of a second. The runtime is stepped without its throttle
+and its events are scheduled into an offline audio context through the same
+`src/audio.js` the page uses. It needs `npm install` to have fetched
+`node-web-audio-api` (Node 18 or later).
+
+| | |
+|---|---|
+| `--seconds N` | clip length, default 8. The WAV is exactly this long: whatever is still sounding at the end is cut off, and events at or after N are dropped |
+| `--out PATH` | the WAV, 16-bit PCM stereo. Default: the program's path with `.wav` |
+| `--sr N` | sample rate, default 44100 |
+| `--seed N` | seed for the noise on the audio side — the drums' noise and the reverb impulse. Default 1 |
+| `--events PATH` | also write the sound events, one JSON object a line: `{"t": 0.5, "kind": "sample", "params": {"name": "bd"}}` |
+| `--out-dir DIR`, `--events-dir DIR` | for several programs in one command: `DIR/<name>.wav` and `DIR/<name>.jsonl` for each |
+| `--manifest FILE` | a batch, one JSON object a line (`-` for stdin): `{"program": "a.py", "out": "a.wav", "events": "a.jsonl"}`, with `seconds`, `sr` and `seed` per line if wanted |
+
+One process renders any number of programs, so a batch pays for starting
+MicroPython once. Each program gets one JSON line on stdout:
+
+    {"program":"beat.py","ok":true,"seconds":8,"sr":44100,"seed":1,"events":52,"peak":0.4937,"rms":0.0527,"silent":false,"render_ms":71.2,"errors":[],"warnings":[],"out":"beat.wav"}
+
+- A program that does not compile, or in which a thread dies before the clip
+  ends, is a failure: `ok` is false, `errors` has the message with the `line`
+  and its `source`, nothing is written for it (a WAV left by an earlier run is
+  removed), and the command exits 1 once the rest of the batch is done.
+- `warnings` are what the log would have shown in orange — a misspelt sample
+  name, say — plus `clipped` if the peak went past full scale. Not failures.
+- `silent` is true when the peak is under -80 dBFS, and `events` is the number
+  of sound events; a program that makes no sound still renders, to silence.
+  `log` appears when the program printed anything.
+- Sliders take the value written in the source. Micro:bit channels read 0.
+
+The same program, `--seconds`, `--sr` and `--seed` always give the same bytes,
+alone or in a batch. The events are sorted by time and scheduled in that
+order, so the `--events` file, with those three settings, is everything the
+audio depends on: two programs with identical event files render identically.
+
+From code:
+
+    import { render, renderFile } from './src/offline.mjs';
+    const { summary, events, wav, channels } = await render(source, { seconds: 8 });
+    const summary2 = await renderFile('beat.py', { out: 'beat.wav', events: 'beat.jsonl' });
+
+`wav` is a Buffer and `channels` two Float32Arrays, both null when
+`summary.ok` is false.
+
+**It is not Chrome's audio engine**, so a render is close to what the page
+plays rather than the same samples. Measured against Chrome 147 rendering the
+same events offline: sine, triangle, FM, noise, the filters, panning, the
+reverb and the decoded recordings match; three things do not.
+
+- The master compressor. Chrome's adds make-up gain and this one does not, so
+  a render is 1–2 dB quieter overall, and the two shape a loud transient
+  differently — up to 6–9 dB apart over a 50ms window on a dense passage. It
+  also delays everything by 8.7ms where Chrome delays it 6ms.
+- `saw`, `square` and `pulse` are about 1.4 dB louder before the compressor:
+  Chrome's band-limited waveforms are scaled down and these are not.
+- The pitch drop of `bd` and `tom` starts slightly lower than Chrome's, which
+  begins its first cycle high.
+
+A program that never returns — `while True: pass`, with no `sleep` — hangs the
+renderer as it would hang the page's worker; a batch over untrusted programs
+wants a timeout around the process.
 
 ## Demos
 

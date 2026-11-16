@@ -10,7 +10,7 @@ const RECORDED_NAMES = new Set(RECORDED.map(([n]) => n));
 // Where a recording's sound begins. MP3 pads the front with a few ms of
 // silence, and how much of it a browser trims varies; starting each buffer at
 // its own onset keeps a recorded kick on the beat everywhere.
-function onset(buf) {
+export function onset(buf) {
   const d = buf.getChannelData(0);
   let i = 0;
   while (i < d.length && Math.abs(d[i]) < 0.003) i++;
@@ -34,10 +34,19 @@ const gain = (n) => (n > EPS ? n : EPS);
 const hz = (n, ctx) => Math.min(Math.max(n > 1 ? n : 1, 1), ctx.sampleRate / 2 - 100);
 
 export class Engine {
-  constructor() {
-    this.ctx = new (window.AudioContext || window.webkitAudioContext)({
+  // The page calls this with nothing and gets a live context. The offline
+  // renderer (src/offline.mjs) hands in an OfflineAudioContext, and a seeded
+  // `random` so that the noise it is built from is the same on every render.
+  //   ctx      the context to build on
+  //   random   () => [0, 1), for the noise buffer, the reverb impulse and each
+  //            noise voice's start offset
+  //   offline  nothing will call panic(), so voices are not tracked
+  constructor({ ctx, random, offline = false } = {}) {
+    this.ctx = ctx || new (window.AudioContext || window.webkitAudioContext)({
       latencyHint: 'interactive',
     });
+    this.random = random || Math.random;
+    this.offline = offline;
     this.master = this.ctx.createGain();
     this.master.gain.value = 0.7;
 
@@ -68,14 +77,19 @@ export class Engine {
       try {
         const r = await fetch(new URL(base + 'samples/' + name + '.mp3', location.href));
         if (!r.ok) throw new Error(r.status);
-        const buf = await this.ctx.decodeAudioData(await r.arrayBuffer());
-        this.recorded.set(name, { buf, offset: onset(buf) });
+        this.addSample(name, await this.ctx.decodeAudioData(await r.arrayBuffer()));
         return null;
       } catch (e) {
         return name;
       }
     })).then((names) => names.filter(Boolean));
     return this.loading;
+  }
+
+  // A decoded recording, however it was come by: fetched above, or read from
+  // disk by the offline renderer. Both get the same onset trim.
+  addSample(name, buf) {
+    this.recorded.set(name, { buf, offset: onset(buf) });
   }
 
   start() {
@@ -103,7 +117,7 @@ export class Engine {
     for (let c = 0; c < 2; c++) {
       const d = buf.getChannelData(c);
       for (let i = 0; i < len; i++) {
-        d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay);
+        d[i] = (this.random() * 2 - 1) * Math.pow(1 - i / len, decay);
       }
     }
     return buf;
@@ -113,7 +127,7 @@ export class Engine {
     const sr = this.ctx.sampleRate;
     const buf = this.ctx.createBuffer(1, sr * dur, sr);
     const d = buf.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    for (let i = 0; i < d.length; i++) d[i] = this.random() * 2 - 1;
     return buf;
   }
 
@@ -131,7 +145,12 @@ export class Engine {
     return p;
   }
 
+  // Remembered so panic() can cut them short, and forgotten by a timer once
+  // they have ended. An offline render has no panic and no real time for a
+  // timer to mean anything in - thousands of them would only keep the process
+  // alive after the audio is done.
   #track(nodes, stopAt) {
+    if (this.offline) return;
     const v = { nodes, stopAt };
     this.voices.add(v);
     setTimeout(() => this.voices.delete(v), (stopAt - this.ctx.currentTime + 0.5) * 1000);
@@ -248,7 +267,7 @@ export class Engine {
       const f = ctx.createBiquadFilter();
       f.type = type; f.frequency.value = hz(freq, ctx); f.Q.value = q;
       s.connect(f).connect(env);
-      s.start(when, Math.random());
+      s.start(when, this.random());
       s.stop(when + dur);
       nodes.push(s);
     };

@@ -18,5 +18,8 @@
     "@micropython/micropython-webassembly-pyscript": "^1.29.0-6",
     "codemirror": "^6.0.2",
     "vite": "^8.2.2"
+  },
+  "optionalDependencies": {
+    "node-web-audio-api": "^1.0.9"
   }
 }

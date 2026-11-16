@@ -27,3 +27,19 @@ jobs:
       # renderer is exercised through a stub canvas. Nothing to install, so the
       # whole run is a few seconds.
       - run: npm test
+
+  # The one test file that does need something installed: the offline renderer
+  # runs on node-web-audio-api, a native package. Kept apart so the job above
+  # stays install-free, and required here so it cannot quietly skip.
+  render:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '20'
+          cache: npm
+      - run: npm ci
+      - run: node test/offline.mjs
+        env:
+          RATTLE_REQUIRE_RENDER: '1'
