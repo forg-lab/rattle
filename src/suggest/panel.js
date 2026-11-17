@@ -1,9 +1,8 @@
 // The suggestions panel: a few edits to try, at the foot of the log pane.
 //
-// Experimental, and not part of the public app: main.js only loads this file
-// in a dev server or a build made with VITE_SUGGEST set, and then only when
-// the address has ?suggest in it. Everything it shows is built here, so
-// nothing of it is in index.html.
+// Experimental and unlisted: main.js loads this file only when the address
+// has ?suggest in it. Everything it shows is built here, so nothing of it is
+// in index.html.
 //
 // Clicking a suggestion makes the edit and runs it. It is one ordinary edit,
 // so undo takes it back.
