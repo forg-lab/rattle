@@ -875,6 +875,16 @@ demoSel.onchange = () => {
 
 if (import.meta.env.DEV) window.__rattle = { view, engine, visuals, run, stop, worker, setViz };
 
+// Experimental: suggested edits (src/suggest). Not in the public app. The
+// first test is fixed at build time, so an ordinary production build drops
+// this block and never emits the files behind it; the second keeps it out of
+// the way in a dev server until it is asked for with ?suggest.
+if (import.meta.env.DEV || import.meta.env.VITE_SUGGEST) {
+  if (new URLSearchParams(location.search).has('suggest')) {
+    import('./suggest/panel.js').then((m) => m.mount({ view, run, aside }));
+  }
+}
+
 // CodeMirror's Mod- prefix already resolves to Ctrl off macOS; the labels did not.
 document.getElementById('kbd-run').textContent = isMac ? '\u2318\u23CE' : 'Ctrl+\u23CE';
 document.getElementById('kbd-stop').textContent = isMac ? '\u2318.' : 'Ctrl+.';

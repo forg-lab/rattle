@@ -1,0 +1,55 @@
+/* The experimental suggestions panel. Loaded with panel.js, so none of this
+   reaches a page that does not show it. Sits where the micro:bit monitor does,
+   and collapses with the log for the same reason. */
+#suggest-panel {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--line);
+  padding: 7px 8px 9px;
+  max-height: 55%;
+  overflow-y: auto;
+}
+body.log-min #suggest-panel { display: none; }
+
+.sg-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0 4px;
+  font: 10px/1.6 var(--mono);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--dim);
+  margin-bottom: 3px;
+}
+.sg-status { letter-spacing: 0; text-transform: none; opacity: .65; }
+
+.sg-rung {
+  padding: 6px 4px 2px;
+  font: 10px/1.6 var(--mono);
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--dim);
+  opacity: .65;
+}
+
+.sg-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: 11.5px/1.45 var(--mono);
+  color: var(--fg);
+  background: none;
+  border: none;
+  border-left: 2px solid var(--line);
+  border-radius: 0 4px 4px 0;
+  padding: 3px 6px 3px 8px;
+  margin: 1px 0;
+  cursor: pointer;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  /* the left edge fills with how much the edit changes what is played */
+  border-image: linear-gradient(to top, var(--accent) calc(var(--change, 0) * 100%), var(--line) 0) 1;
+}
+.sg-item:hover { background: #262b34; color: var(--accent); }
+
+.sg-empty { padding: 4px; font: 11.5px/1.5 var(--mono); color: var(--dim); }
