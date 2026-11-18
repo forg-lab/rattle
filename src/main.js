@@ -878,7 +878,11 @@ if (import.meta.env.DEV) window.__rattle = { view, engine, visuals, run, stop, w
 // Experimental: suggested edits (src/suggest). Unlisted: it appears only when
 // the address has ?suggest in it, and none of its code is fetched otherwise.
 if (new URLSearchParams(location.search).has('suggest')) {
-  import('./suggest/panel.js').then((m) => m.mount({ view, run, aside }));
+  import('./suggest/panel.js').then((m) => {
+    // the panel lives in the log pane, so asking for it opens the pane
+    if (logIsMin()) setLogMin(false);
+    m.mount({ view, run, aside });
+  });
 }
 
 // CodeMirror's Mod- prefix already resolves to Ctrl off macOS; the labels did not.
